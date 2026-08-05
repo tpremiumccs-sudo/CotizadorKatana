@@ -33,9 +33,19 @@ const config = [
 
   // Prisma solo se toca desde la capa de datos: así toda consulta pasa por el
   // sitio donde se aplica el filtro por rol.
+  //
+  // `src/server/auth/**` queda fuera a propósito: es la capa PRE-autenticación
+  // —sesiones e intentos de acceso— y ahí todavía no existe un actor por el que
+  // filtrar. Es justamente el código que averigua quién es el actor. Las
+  // consultas de negocio del flujo de acceso sí viven en src/server/data.
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/server/data/**', 'src/lib/db.ts', 'src/app/api/health/**'],
+    ignores: [
+      'src/server/data/**',
+      'src/server/auth/**',
+      'src/lib/db.ts',
+      'src/app/api/health/**',
+    ],
     rules: {
       // La variante de typescript-eslint entiende `import type`, que se borra
       // al compilar y por tanto no viola nada.
