@@ -26,7 +26,9 @@ export default async function PaginaTalento({
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
       <nav className="mb-4">
-        <Link href="/talentos" className="text-sm font-semibold text-katana-500 hover:underline">
+        <Link href="/talentos" data-touch-target
+          className="inline-flex min-h-[44px] items-center rounded-katana px-2
+                     text-sm font-semibold text-katana-500 hover:bg-katana-100">
           ← Talentos
         </Link>
       </nav>

@@ -25,7 +25,9 @@ export default async function PaginaRevision({
       <nav className="mb-4">
         <Link
           href="/importaciones"
-          className="text-sm font-semibold text-katana-500 hover:underline"
+          data-touch-target
+          className="inline-flex min-h-[44px] items-center rounded-katana px-2
+                     text-sm font-semibold text-katana-500 hover:bg-katana-100"
         >
           ← Importaciones
         </Link>

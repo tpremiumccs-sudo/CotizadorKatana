@@ -32,7 +32,9 @@ export default async function PaginaEditor({
       <nav className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6">
         <Link
           href="/cotizaciones"
-          className="text-sm font-semibold text-katana-500 hover:underline"
+          data-touch-target
+          className="inline-flex min-h-[44px] items-center rounded-katana px-2
+                     text-sm font-semibold text-katana-500 hover:bg-katana-100"
         >
           ← Cotizaciones
         </Link>

@@ -50,7 +50,9 @@ export default async function Inicio() {
           </p>
           <Link
             href="/api/health"
-            className="mt-3 inline-block text-sm font-semibold text-katana-500 underline underline-offset-4"
+            data-touch-target
+            className="mt-2 inline-flex min-h-[44px] items-center text-sm font-semibold
+                       text-katana-500 underline underline-offset-4"
           >
             Ver estado del sistema
           </Link>

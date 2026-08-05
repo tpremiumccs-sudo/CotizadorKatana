@@ -22,7 +22,9 @@
     "test:pdf": "vitest run tests/pdf",
     "test:e2e": "playwright test",
     "huella": "python3 tools/huella.py",
-    "calibrar": "python3 tools/calibrar.py"
+    "calibrar": "python3 tools/calibrar.py",
+    "build:standalone": "next build && cp -r .next/static .next/standalone/.next/static && ([ -d public ] && cp -r public .next/standalone/public || true)",
+    "test:todo": "npm run test:unit && npm run test:integracion && npm run test:pdf && npm run build:standalone && npm run test:e2e"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -46,6 +48,7 @@
     "zustand": "5.0.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/eslintrc": "^3.3.6",
     "@playwright/test": "1.56.0",
     "@tailwindcss/postcss": "4.1.14",

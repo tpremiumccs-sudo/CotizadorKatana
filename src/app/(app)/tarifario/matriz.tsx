@@ -267,37 +267,42 @@ export function MatrizTarifario({
                                    focus:outline-none disabled:border-transparent
                                    disabled:bg-transparent"
                       />
+                      {/*
+                        Un desplegable y no tres botoncitos: en la versión
+                        anterior cada uno medía 16 px de alto y en un iPad no
+                        se acertaba a ninguno — eran 173 objetivos imposibles
+                        en una sola pantalla. El desplegable nativo además abre
+                        el selector del sistema en iOS, que se usa con el
+                        pulgar sin apuntar.
+                      */}
                       {!soloLectura && (
-                        <div className="mt-0.5 flex justify-end gap-0.5">
+                        <select
+                          aria-label={`Estado de ${f.nombre}, ${c.nombre}`}
+                          value={estado}
+                          onChange={(e) => {
+                            const s = e.target.value as EstadoPrecioDoc
+                            if (s === 'QUOTED') return
+                            void guardar(f, c.id, { priceStatus: s, amountCents: null })
+                          }}
+                          className="mt-0.5 min-h-[44px] w-full rounded border
+                                     border-transparent bg-transparent px-1 text-xs
+                                     text-etiqueta hover:border-katana-200
+                                     focus:border-katana-500 focus:outline-none"
+                        >
+                          {/* "Con precio" sólo aparece si ya lo está: elegirlo
+                              dejaría la celda cotizada sin importe. Para poner
+                              precio se escribe arriba. */}
+                          {estado === 'QUOTED' && (
+                            <option value="QUOTED">Con precio</option>
+                          )}
                           {(['PENDING', 'CASE_BY_CASE', 'NOT_APPLICABLE'] as const).map(
                             (s) => (
-                              <button
-                                key={s}
-                                type="button"
-                                title={ETIQUETA_ESTADO[s]}
-                                aria-label={`${f.nombre}, ${c.nombre}: marcar como ${ETIQUETA_ESTADO[s]}`}
-                                onClick={() =>
-                                  void guardar(f, c.id, {
-                                    priceStatus: s,
-                                    amountCents: null,
-                                  })
-                                }
-                                className={
-                                  'rounded px-1 text-[10px] leading-4 ' +
-                                  (estado === s
-                                    ? 'bg-katana-200 font-semibold text-katana-700'
-                                    : 'text-etiqueta hover:bg-katana-100')
-                                }
-                              >
-                                {s === 'PENDING'
-                                  ? 'Pend.'
-                                  : s === 'CASE_BY_CASE'
-                                    ? 'Caso'
-                                    : 'N/A'}
-                              </button>
+                              <option key={s} value={s}>
+                                {ETIQUETA_ESTADO[s]}
+                              </option>
                             ),
                           )}
-                        </div>
+                        </select>
                       )}
                     </td>
                   )

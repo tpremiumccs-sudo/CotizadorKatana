@@ -36,3 +36,5 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 __pycache__/
 .venv/
+/test-results/
+/playwright-report/

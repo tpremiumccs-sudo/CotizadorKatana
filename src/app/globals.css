@@ -28,8 +28,18 @@
 
   /* Grises de la identidad */
   --color-tinta: #1c1326;
-  --color-tinta-suave: #5e5566;
-  --color-etiqueta: #9a92a6;
+  --color-tinta-suave: #5e5566; /* 7.1:1 sobre blanco */
+
+  /* El gris-lila de las etiquetas.
+     En el PDF vale #9A92A6 y así se queda ahí: está MEDIDO del original y las
+     pruebas de fidelidad lo comprueban al hexadecimal. Pero sobre blanco da
+     2.98:1 y el mínimo de WCAG AA para texto es 4.5:1 — en pantalla, con
+     reflejos y a un brazo de distancia en un iPad, esas etiquetas no se leen.
+     El papel y la pantalla no tienen por qué usar el mismo gris: éste es el
+     mismo tono, oscurecido hasta 5.3:1 sobre blanco y 5.0:1 sobre el tinte
+     lila de las filas alternas — que es donde más se usa y donde un gris
+     apenas válido sobre blanco se queda corto. */
+  --color-etiqueta: #6f6880;
 
   /* Semánticos */
   --color-exito: #15803d;

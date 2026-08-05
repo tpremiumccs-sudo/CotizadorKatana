@@ -30,7 +30,10 @@ export function BarraSesion({ actor }: { actor: Actor }) {
                       gap-y-1 px-4 py-2 sm:px-6">
         <Link
           href="/"
-          className="text-xs font-bold tracking-[0.14em] text-katana-500"
+          data-touch-target
+          className="inline-flex min-h-[44px] items-center rounded-katana px-2
+                     text-xs font-bold tracking-[0.14em] text-katana-500
+                     hover:bg-katana-100"
         >
           KATANA TALENT
         </Link>
