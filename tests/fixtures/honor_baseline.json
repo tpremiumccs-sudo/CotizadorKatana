@@ -809,7 +809,11 @@
           "bottom": 237.056,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 236.756,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 70.424,
@@ -818,7 +822,11 @@
           "bottom": 290.756,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 70.724,
+          "horizontal": false,
+          "desde": 236.756,
+          "hasta": 290.756
         },
         {
           "x0": 540.976,
@@ -827,7 +835,11 @@
           "bottom": 290.756,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 541.276,
+          "horizontal": false,
+          "desde": 236.756,
+          "hasta": 290.756
         },
         {
           "x0": 70.724,
@@ -836,7 +848,11 @@
           "bottom": 264.006,
           "color": "#E4DBF0",
           "grosor": 0.5,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 263.756,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 70.724,
@@ -845,7 +861,11 @@
           "bottom": 291.056,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 290.756,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 70.724,
@@ -854,7 +874,11 @@
           "bottom": 303.056,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 302.756,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 70.424,
@@ -863,7 +887,11 @@
           "bottom": 453.756,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 70.724,
+          "horizontal": false,
+          "desde": 302.756,
+          "hasta": 453.756
         },
         {
           "x0": 540.976,
@@ -872,7 +900,11 @@
           "bottom": 453.756,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 541.276,
+          "horizontal": false,
+          "desde": 302.756,
+          "hasta": 453.756
         },
         {
           "x0": 70.724,
@@ -881,7 +913,11 @@
           "bottom": 368.456,
           "color": "#E4DBF0",
           "grosor": 0.4,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 368.256,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 70.724,
@@ -890,7 +926,11 @@
           "bottom": 396.956,
           "color": "#E4DBF0",
           "grosor": 0.4,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 396.756,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 70.724,
@@ -899,16 +939,11 @@
           "bottom": 425.456,
           "color": "#E4DBF0",
           "grosor": 0.4,
-          "forma": "linea"
-        },
-        {
-          "x0": 70.724,
-          "top": 453.456,
-          "x1": 541.276,
-          "bottom": 454.056,
-          "color": "#E4DBF0",
-          "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 425.256,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 70.724,
@@ -917,7 +952,11 @@
           "bottom": 453.956,
           "color": "#E4DBF0",
           "grosor": 0.4,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 453.756,
+          "horizontal": true,
+          "desde": 70.724,
+          "hasta": 541.276
         },
         {
           "x0": 34.016,
@@ -926,7 +965,11 @@
           "bottom": 761.169,
           "color": "#E4DBF0",
           "grosor": 0.7,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 760.819,
+          "horizontal": true,
+          "desde": 34.016,
+          "hasta": 577.984
         }
       ],
       "imagenes": [
@@ -1146,7 +1189,11 @@
           "bottom": 37.2,
           "color": "#E4DBF0",
           "grosor": 0.7,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 36.85,
+          "horizontal": true,
+          "desde": 34.016,
+          "hasta": 577.984
         },
         {
           "x0": 34.016,
@@ -1155,7 +1202,11 @@
           "bottom": 209.155,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 208.855,
+          "horizontal": true,
+          "desde": 34.016,
+          "hasta": 577.984
         },
         {
           "x0": 32.516,
@@ -1164,7 +1215,11 @@
           "bottom": 248.055,
           "color": "#7B2FBE",
           "grosor": 3.0,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 34.016,
+          "horizontal": false,
+          "desde": 208.855,
+          "hasta": 248.055
         },
         {
           "x0": 33.716,
@@ -1173,7 +1228,11 @@
           "bottom": 248.055,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 34.016,
+          "horizontal": false,
+          "desde": 208.855,
+          "hasta": 248.055
         },
         {
           "x0": 577.684,
@@ -1182,7 +1241,11 @@
           "bottom": 248.055,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 577.984,
+          "horizontal": false,
+          "desde": 208.855,
+          "hasta": 248.055
         },
         {
           "x0": 34.016,
@@ -1191,7 +1254,11 @@
           "bottom": 248.355,
           "color": "#E4DBF0",
           "grosor": 0.6,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 248.055,
+          "horizontal": true,
+          "desde": 34.016,
+          "hasta": 577.984
         },
         {
           "x0": 34.016,
@@ -1200,7 +1267,11 @@
           "bottom": 761.169,
           "color": "#E4DBF0",
           "grosor": 0.7,
-          "forma": "linea"
+          "forma": "linea",
+          "eje": 760.819,
+          "horizontal": true,
+          "desde": 34.016,
+          "hasta": 577.984
         }
       ],
       "imagenes": [

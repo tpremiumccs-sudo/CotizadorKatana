@@ -100,6 +100,16 @@ def comparar(generado: dict, esperado: dict) -> Informe:
         if tg != te:
             solo_esp = [t for t in te if t not in tg]
             solo_gen = [t for t in tg if t not in te]
+            # Primer índice que difiere: si no falta ni sobra nada, el problema
+            # es el ORDEN de los runs y hay que poder verlo.
+            primero = next(
+                (i for i in range(min(len(tg), len(te))) if tg[i] != te[i]), None
+            )
+            contexto = {}
+            if primero is not None:
+                contexto['indice'] = primero
+                contexto['generado'] = tg[primero]
+                contexto['esperado'] = te[primero]
             inf.fallo(
                 'texto',
                 n,
@@ -107,6 +117,7 @@ def comparar(generado: dict, esperado: dict) -> Informe:
                 f'{len(te)} esperados).',
                 falta=solo_esp[:12],
                 sobra=solo_gen[:12],
+                **contexto,
             )
             continue
 
@@ -148,7 +159,7 @@ def comparar(generado: dict, esperado: dict) -> Informe:
 
         # ── Geometría ──────────────────────────────────────────────────────
         _comparar_cajas(inf, n, 'rect', pg['rects'], pe['rects'], clave='relleno')
-        _comparar_cajas(inf, n, 'trazo', pg['trazos'], pe['trazos'], clave='color')
+        _comparar_filetes(inf, n, pg['trazos'], pe['trazos'])
 
         # ── Imágenes (el logo) ─────────────────────────────────────────────
         if len(pg['imagenes']) != len(pe['imagenes']):
@@ -168,6 +179,58 @@ def comparar(generado: dict, esperado: dict) -> Informe:
                             f'(Δ={a[eje] - b[eje]:+.3f} pt).',
                         )
     return inf
+
+
+def _comparar_filetes(
+    inf: Informe, pagina: int, gen: list[dict], esp: list[dict]
+) -> None:
+    """
+    Compara filetes por su EJE y su extensión, no por su caja.
+
+    Un filete de 0.4 pt del PDF original y el de 0.75 pt que produce Chromium
+    (que no puede pintar menos de un píxel) son el mismo elemento de diseño si
+    caen en la misma línea. Comparar el grosor exacto sería exigir lo imposible.
+    """
+    restantes = list(gen)
+    for b in esp:
+        candidatos = [
+            g for g in restantes
+            if g.get('color') == b.get('color')
+            and g.get('horizontal') == b.get('horizontal')
+        ]
+        if not candidatos:
+            inf.fallo(
+                'filete', pagina,
+                f"Falta un filete {b.get('color')} en el eje {b.get('eje')}.",
+            )
+            continue
+
+        def desvio(g: dict) -> float:
+            return max(
+                abs(g['eje'] - b['eje']),
+                abs(g['desde'] - b['desde']),
+                abs(g['hasta'] - b['hasta']),
+            )
+
+        mejor = min(candidatos, key=desvio)
+        d = desvio(mejor)
+        if d > TOL_GEOM:
+            orientacion = 'horizontal' if b.get('horizontal') else 'vertical'
+            inf.fallo(
+                'filete', pagina,
+                f"Filete {orientacion} {b.get('color')} esperado en el eje "
+                f"{b['eje']} de {b['desde']} a {b['hasta']}; el más cercano está "
+                f"en {mejor['eje']} de {mejor['desde']} a {mejor['hasta']} "
+                f"(desvío {d:.3f} pt).",
+            )
+        restantes.remove(mejor)
+
+    for g in restantes:
+        inf.fallo(
+            'filete', pagina,
+            f"Sobra un filete {g.get('color')} en el eje {g.get('eje')} "
+            f"de {g.get('desde')} a {g.get('hasta')}.",
+        )
 
 
 def _comparar_cajas(
@@ -239,6 +302,10 @@ def main() -> int:
                 print(f"        falta: {it['falta']}")
             if it.get('sobra'):
                 print(f"        sobra: {it['sobra']}")
+            if it.get('indice') is not None:
+                print(f"        primer desacuerdo en el run {it['indice']}:")
+                print(f"          generado: {it['generado']!r}")
+                print(f"          esperado: {it['esperado']!r}")
         if len(items) > 8:
             print(f'    … y {len(items) - 8} más')
     return 1

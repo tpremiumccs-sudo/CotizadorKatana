@@ -41,9 +41,16 @@ except ImportError:  # pragma: no cover
         '  python3 -m venv .venv && .venv/bin/pip install pdfplumber'
     )
 
-# Cuantización: Chromium redondea la línea base al píxel CSS (1/96 in = 0.75 pt),
-# así que agrupar por `top` exacto partiría en dos una misma línea visual.
-CUANTO_LINEA = 1.0       # pt — tolerancia para considerar dos runs en la misma línea
+# Tolerancia para dar dos runs por pertenecientes a la misma línea visual.
+#
+# No basta con el píxel CSS (0.75 pt): en una misma fila conviven tamaños
+# distintos —la caja de metadatos pone la etiqueta a 7.2 pt y el valor a
+# 10 pt— y sus `top` difieren casi un punto ya en el documento original.
+# El menor salto legítimo ENTRE líneas del documento es de 10.5 pt (las dos
+# líneas del encabezado "TIKTOK + REEL / (ESPEJO)"), así que 3 pt agrupa bien
+# sin fundir líneas distintas.
+CUANTO_LINEA = 3.0
+GROSOR_MAXIMO_FILETE = 3.2  # pt — por debajo de esto, un relleno es un filete
 REDONDEO = 3             # decimales al serializar
 
 RE_CID = re.compile(r'\(cid:(\d+)\)')
@@ -203,7 +210,19 @@ def extraer_geometria(page) -> dict:
             # El rectángulo blanco de fondo de página no es información.
             if color == '#FFFFFF' and caja['x0'] <= 0.5 and caja['top'] <= 0.5:
                 continue
-            rects.append({**caja, 'relleno': color})
+            ancho = caja['x1'] - caja['x0']
+            alto = caja['bottom'] - caja['top']
+            if min(ancho, alto) <= GROSOR_MAXIMO_FILETE:
+                # Filete: se clasifica como trazo para poder compararlo con el
+                # `stroke` equivalente del PDF original.
+                trazos.append({
+                    **caja,
+                    'color': color,
+                    'grosor': round(min(ancho, alto), 2),
+                    'forma': 'filete',
+                })
+            else:
+                rects.append({**caja, 'relleno': color})
         if r.get('stroke'):
             trazos.append(
                 {
@@ -234,15 +253,25 @@ def extraer_geometria(page) -> dict:
             }
         )
 
-    # Fusionar trazos co-localizados: un borde puede venir como 4 líneas o como
-    # un rect con contorno, y visualmente es lo mismo.
+    # Fusionar trazos co-localizados. Un borde puede venir como cuatro líneas o
+    # como un rectángulo con contorno; y el mismo filete puede estar dibujado
+    # dos veces con grosores distintos. Se identifican por su EJE (el centro de
+    # la banda) y su extensión, que es lo que se ve.
     vistos: dict[tuple, dict] = {}
     for t in trazos:
+        ancho = t['x1'] - t['x0']
+        alto = t['bottom'] - t['top']
+        horizontal = ancho >= alto
+        eje = (t['top'] + t['bottom']) / 2 if horizontal else (t['x0'] + t['x1']) / 2
+        t['eje'] = round(eje, 3)
+        t['horizontal'] = horizontal
+        t['desde'] = round(t['x0'] if horizontal else t['top'], 3)
+        t['hasta'] = round(t['x1'] if horizontal else t['bottom'], 3)
         clave = (
-            round(t['x0'], 1),
-            round(t['top'], 1),
-            round(t['x1'], 1),
-            round(t['bottom'], 1),
+            horizontal,
+            round(eje, 1),
+            round(t['desde'], 0),
+            round(t['hasta'], 0),
             t['color'],
         )
         vistos.setdefault(clave, t)
