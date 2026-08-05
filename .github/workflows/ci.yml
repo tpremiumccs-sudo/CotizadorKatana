@@ -153,15 +153,34 @@ jobs:
       # Comprobar que en la imagen está lo que el arranque necesita. Cada uno
       # de estos ficheros faltaba en algún momento y el fallo sólo aparecía al
       # arrancar el contenedor en producción.
+      #
+      # Dos cosas importan en cómo está escrito:
+      #
+      #  · La salida del comando que falla SE IMPRIME. La versión anterior la
+      #    mandaba a /dev/null, así que cuando el CLI de Prisma no arrancó, lo
+      #    único que se supo fue "✗": ni el error ni la traza. Una comprobación
+      #    que esconde por qué falló obliga a adivinar a ciegas, y cada intento
+      #    cuesta una construcción entera.
+      #
+      #  · NO se sale en el primer fallo. Se corren todas y se resume al final.
+      #    Construir esta imagen son ocho minutos; enterarse de un problema por
+      #    vuelta es tirarlos.
       - name: La imagen tiene lo que el arranque necesita
         run: |
-          set -e
+          fallos=0
+          en_imagen() { docker run --rm --entrypoint sh katana/cotizador:prueba -c "$1" 2>&1; }
+
           probar() {
-            if docker run --rm --entrypoint sh katana/cotizador:prueba -c "$1" >/dev/null 2>&1
-            then echo "  ✓ $2"
-            else echo "  ✗ $2"; exit 1
+            local salida
+            if salida="$(en_imagen "$1")"; then
+              echo "  ✓ $2"
+            else
+              echo "  ✗ $2"
+              echo "$salida" | sed 's/^/        /'
+              fallos=$((fallos + 1))
             fi
           }
+
           probar "test -f /opt/prisma-cli/node_modules/prisma/build/index.js" "el CLI de Prisma"
           probar "node /opt/prisma-cli/node_modules/prisma/build/index.js --version" "el CLI arranca (carga @prisma/config, effect y empathic)"
           probar "ls /opt/prisma-cli/node_modules/@prisma/engines/schema-engine-*" "el schema-engine, que usa migrate deploy"
@@ -172,6 +191,27 @@ jobs:
           probar "test -d /app/assets/fonts && test -d /app/assets/brand" "las fuentes y el logo del documento"
           probar "test -d /ms-playwright" "Chromium"
           probar "node -e \"process.exit(require('/app/.next/required-server-files.json').config.experimental.serverActions.allowedOrigins.includes('ejemplo.invalid')?0:1)\"" "allowedOrigins con el dominio real, no localhost"
+
+          # El seed no se puede ejecutar aquí (no hay base), pero sí comprobar
+          # que Node lo carga: eso descarta que le falte una dependencia en el
+          # node_modules mínimo del standalone, que es como fallaría de verdad.
+          probar "cd /app && node --input-type=module -e \"import('./prisma/seed.mjs').catch(e => { if (String(e).includes('ERR_MODULE_NOT_FOUND')) { console.error(e); process.exit(1) } })\"" "el seed resuelve sus imports"
+
+          if [ "$fallos" -gt 0 ]; then
+            echo ""
+            echo "═══ $fallos comprobación(es) fallida(s). Diagnóstico de la imagen ═══"
+            en_imagen 'echo "--- quién soy ---"; id; pwd
+              echo "--- /opt/prisma-cli ---"; ls -la /opt/prisma-cli/node_modules/ | head -20
+              echo "--- prisma ---"; ls -la /opt/prisma-cli/node_modules/prisma/ 2>&1 | head -10
+              echo "--- @prisma ---"; ls -la /opt/prisma-cli/node_modules/@prisma/ 2>&1
+              echo "--- engines ---"; ls -la /opt/prisma-cli/node_modules/@prisma/engines/ 2>&1 | head -20
+              echo "--- ¿están effect y empathic? ---"; ls -d /opt/prisma-cli/node_modules/effect /opt/prisma-cli/node_modules/empathic 2>&1
+              echo "--- /app/node_modules ---"; ls /app/node_modules/ 2>&1 | head -20
+              echo "--- entorno ---"; env | sort' || true
+            exit 1
+          fi
+          echo ""
+          echo "Todas las comprobaciones pasan."
 
   imagen:
     name: Imagen
