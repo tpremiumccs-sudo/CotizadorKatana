@@ -74,6 +74,11 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
+# Fuentes y logo del documento. NO son opcionales: se leen desde el disco con
+# `process.cwd()` y se embeben en el HTML, así que sin ellas no hay vista previa
+# ni PDF — falla la generación entera, no sólo la tipografía.
+COPY --from=builder /app/assets ./assets
+
 # Prisma: el CLI y el motor hacen falta para `migrate deploy` al arrancar.
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma

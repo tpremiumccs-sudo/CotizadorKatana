@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from 'zustand'
 import { MatrizPrecios } from '@/components/editor/matriz-precios'
 import { PanelPreview } from '@/components/editor/panel-preview'
+import { BotonPdf } from '@/components/editor/boton-pdf'
 import { crearTienda, type Tienda, type EstadoGuardado } from './store'
 import type { EstadoEditor, EstadoPrecioEditor } from '@/lib/editor/tipos'
 
@@ -233,9 +234,36 @@ function Encabezado({
           </span>
         )}
         <IndicadorGuardado guardado={guardado} />
+        <BotonPdf
+          quoteId={doc.quoteId}
+          cliente={doc.cliente}
+          bloqueo={bloqueoPdf(guardado)}
+        />
       </div>
     </header>
   )
+}
+
+/**
+ * Cuándo NO se debe poder bajar el PDF.
+ *
+ * El PDF lo dibuja el servidor con lo que tiene guardado. Con un cambio en
+ * vuelo saldría con la cifra vieja, y ese archivo es el que acaba en el correo
+ * de la marca — es de las pocas cosas del sistema que no se pueden corregir
+ * después.
+ */
+function bloqueoPdf(guardado: EstadoGuardado): string | null {
+  switch (guardado.fase) {
+    case 'pendiente':
+    case 'guardando':
+      return 'Espera a que termine de guardar: el PDF saldría con la cifra anterior.'
+    case 'error':
+      return 'Hay un cambio que no se guardó. Corrígelo antes de generar el PDF.'
+    case 'conflicto':
+      return 'Vuelve a cargar antes de generar el PDF: esta pestaña tiene una versión vieja.'
+    default:
+      return null
+  }
 }
 
 /**

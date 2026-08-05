@@ -143,6 +143,45 @@ export async function leerEditor(quoteId: string): Promise<EstadoEditor | null> 
   }
 }
 
+/**
+ * Deja constancia de que alguien se llevó el PDF.
+ *
+ * Es el momento en que el documento sale de la agencia, así que es justo lo que
+ * hay que poder rastrear: si una marca enseña un tabulador con cifras raras, la
+ * bitácora dice quién lo descargó y cuándo.
+ */
+export async function registrarDescarga(
+  quoteId: string,
+  archivo: string,
+  paginas: number,
+): Promise<void> {
+  const actor = await autorizar('cotizacion.descargarPdf', {
+    entidadTipo: 'Quote',
+    entidadId: quoteId,
+  })
+  const q = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    select: { folio: true, draftRef: true, client: { select: { displayName: true } } },
+  })
+  if (!q) return
+
+  await prisma.$transaction(async (tx) => {
+    await append(tx, {
+      actor,
+      categoria: 'DOCUMENTO',
+      accion: 'pdf.descargado',
+      entidadTipo: 'Quote',
+      entidadId: quoteId,
+      entidadEtiqueta: q.folio ?? q.draftRef,
+      resumen: `${actor.nombre} descargó el PDF de ${q.client.displayName} (${paginas} página(s)).`,
+      metadatos: { archivo, paginas },
+      // Descargarlo tres veces seguidas mientras se prepara el correo es un
+      // solo hecho, no tres.
+      coalescerPor: `descarga|${quoteId}`,
+    })
+  })
+}
+
 /** Lista para la pantalla de cotizaciones. */
 export async function listarCotizaciones(limite = 50) {
   await autorizar('cotizacion.ver')

@@ -8,11 +8,14 @@ export const runtime = 'nodejs'
 /**
  * Sonda de salud para Docker y Cloudflare.
  *
- * Comprueba las TRES cosas sin las que la app no sirve de nada:
+ * Comprueba las CUATRO cosas sin las que la app no sirve de nada:
  *   · la base responde,
  *   · las restricciones de integridad siguen puestas (una migración a medias
  *     dejaría pasar precios "Pendiente" con importe),
- *   · existe el binario de Chromium, o no habrá PDF.
+ *   · existe el binario de Chromium, o no habrá PDF,
+ *   · están las fuentes y el logo del documento, que se leen del disco: si la
+ *     imagen se construyó sin ellas, la app arranca y todo parece bien hasta
+ *     que alguien pide un PDF en una junta.
  */
 export async function GET() {
   const detalle: Record<string, unknown> = {}
@@ -76,6 +79,22 @@ export async function GET() {
     ok = false
     detalle.chromium = false
     detalle.chromiumError = e instanceof Error ? e.message : String(e)
+  }
+
+  // ── Recursos del documento ─────────────────────────────────────────────
+  try {
+    const { fuentesDocumento, logoDataUri } = await import('@/server/pdf/fuentes')
+    const f = fuentesDocumento()
+    const logo = logoDataUri()
+    detalle.documento =
+      f.regularWoff2Base64.length > 1_000 &&
+      f.boldWoff2Base64.length > 1_000 &&
+      logo.length > 1_000
+    if (detalle.documento !== true) ok = false
+  } catch (e) {
+    ok = false
+    detalle.documento = false
+    detalle.documentoError = e instanceof Error ? e.message : String(e)
   }
 
   return NextResponse.json(
