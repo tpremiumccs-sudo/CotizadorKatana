@@ -88,9 +88,16 @@ WORKDIR /cli
 #
 # La versión se deriva de package.json en vez de escribirse a mano, para que no
 # pueda quedar desalineada con el cliente generado.
-COPY package.json ./package.json.original
-RUN PV="$(node -p "require('./package.json.original').devDependencies.prisma")" \
-    && rm package.json.original \
+#
+# El archivo se copia FUERA de /cli y conservando la extensión `.json`. Las dos
+# cosas importan: fuera, porque `npm init -y` escribe un package.json aquí y
+# pisaría el original; con extensión `.json`, porque `require()` elige el
+# cargador por la extensión y con una desconocida cae al de JavaScript — un JSON
+# leído como JS revienta en el primer `:`. Así falló la primera construcción.
+COPY package.json /tmp/version-prisma.json
+RUN PV="$(node -p "require('/tmp/version-prisma.json').devDependencies.prisma")" \
+    && case "$PV" in ''|undefined) echo "No se pudo leer la versión de prisma de package.json" >&2; exit 1;; esac \
+    && echo "[imagen] CLI de Prisma: ${PV}" \
     && npm init -y >/dev/null \
     && npm install --no-audit --no-fund "prisma@${PV}"
 
