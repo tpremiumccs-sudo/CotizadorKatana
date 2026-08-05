@@ -727,7 +727,7 @@ function paginarCotizacion(doc: DocumentoCotizacion): PaginaCotizacion[] {
   return paginas
 }
 
-function renderCotizacion(doc: DocumentoCotizacion, fuentes: Fuentes): string {
+function cuerpoCotizacion(doc: DocumentoCotizacion): string {
   const paginas = paginarCotizacion(doc)
   const medidos = medirBloques(doc)
   const total = paginas.length
@@ -760,7 +760,7 @@ function renderCotizacion(doc: DocumentoCotizacion, fuentes: Fuentes): string {
     })
     .join('')
 
-  return envolver(doc, fuentes, cuerpo)
+  return cuerpo
 }
 
 function envolver(doc: Documento, fuentes: Fuentes, cuerpo: string): string {
@@ -771,12 +771,20 @@ function envolver(doc: Documento, fuentes: Fuentes, cuerpo: string): string {
   )
 }
 
-export function renderDocumentHtml(
-  doc: Documento,
-  fuentes: Fuentes,
-  _modo: ModoRender = 'print',
-): string {
-  if (doc.tipo === 'COTIZACION') return renderCotizacion(doc, fuentes)
+/**
+ * Las páginas del documento, sin la envoltura de `<html>` ni el CSS.
+ *
+ * Existe por la vista previa en vivo: el iframe conserva su `<head>` —con las
+ * fuentes ya decodificadas— y en cada tecleo sólo se reemplaza esto. Volver a
+ * escribir el documento entero obligaría al navegador a redecodificar las
+ * fuentes en cada pulsación, que es justo lo que hace que una vista previa se
+ * sienta lenta.
+ *
+ * NO es una segunda forma de dibujar el documento: `renderDocumentHtml` la
+ * llama a ella. Lo que se ve en pantalla y lo que se imprime salen de aquí.
+ */
+export function renderDocumentBody(doc: Documento): string {
+  if (doc.tipo === 'COTIZACION') return cuerpoCotizacion(doc)
 
   const paginas = paginar(doc)
   const total = paginas.length
@@ -802,5 +810,18 @@ export function renderDocumentHtml(
     })
     .join('')
 
-  return envolver(doc, fuentes, cuerpo)
+  return cuerpo
+}
+
+/**
+ * El documento completo y autosuficiente: fuentes y logo van dentro, así que
+ * no pide nada por red. Es lo que imprime Chromium y lo que carga el iframe la
+ * primera vez.
+ */
+export function renderDocumentHtml(
+  doc: Documento,
+  fuentes: Fuentes,
+  _modo: ModoRender = 'print',
+): string {
+  return envolver(doc, fuentes, renderDocumentBody(doc))
 }

@@ -96,9 +96,14 @@ export async function append(
     return
   }
 
-  // La ventana se identifica por actor + clave + bloque de 5 minutos.
+  // La ventana se identifica por actor + ACCIÓN + clave + bloque de 5 minutos.
+  //
+  // La acción entra en la clave porque hechos distintos no se pueden fundir:
+  // ajustar un precio y luego revertirlo comparten la celda, y sin esto el
+  // segundo reescribiría el apunte del primero dejando un registro que dice
+  // "ajustó" cuando lo que pasó fue "revirtió".
   const bloque = Math.floor(ahora.getTime() / VENTANA_MS)
-  const ventana = `${evento.actor?.id ?? 'anon'}|${evento.coalescerPor}|${bloque}`
+  const ventana = `${evento.actor?.id ?? 'anon'}|${evento.accion}|${evento.coalescerPor}|${bloque}`
 
   const previo = await tx.bitacora.findUnique({ where: { ventana } })
   if (!previo) {

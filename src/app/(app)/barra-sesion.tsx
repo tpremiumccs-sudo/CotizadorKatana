@@ -20,6 +20,17 @@ export function BarraSesion({ actor }: { actor: Actor }) {
           KATANA TALENT
         </Link>
 
+        <nav className="flex items-center gap-1">
+          <Link
+            href="/cotizaciones"
+            data-touch-target
+            className="inline-flex min-h-[44px] items-center rounded-katana px-3
+                       text-sm font-medium text-tinta hover:bg-katana-100"
+          >
+            Cotizaciones
+          </Link>
+        </nav>
+
         <div className="ml-auto flex min-w-0 items-center gap-3">
           <div className="min-w-0 text-right">
             <p className="truncate text-sm font-medium text-tinta">{actor.nombre}</p>

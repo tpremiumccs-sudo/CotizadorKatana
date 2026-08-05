@@ -19,12 +19,35 @@ export default async function Inicio() {
           idéntica al PDF que se envía.
         </p>
 
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/cotizaciones"
+            data-touch-target
+            className="inline-flex min-h-[44px] items-center rounded-katana bg-katana-500
+                       px-5 text-sm font-semibold text-white hover:bg-katana-600"
+          >
+            Ver cotizaciones
+          </Link>
+          {can(actor, 'cotizacion.crear').permitido && (
+            <Link
+              href="/cotizaciones/nueva"
+              data-touch-target
+              className="inline-flex min-h-[44px] items-center rounded-katana border
+                         border-katana-300 px-5 text-sm font-semibold text-katana-600
+                         hover:bg-katana-100"
+            >
+              Nueva cotización
+            </Link>
+          )}
+        </div>
+
         <div className="mt-10 rounded-katana border border-katana-200 bg-katana-100 p-5">
           <p className="text-sm text-tinta-suave">
-            El sistema está en construcción. Las pantallas se irán habilitando
-            por fases.
+            El sistema está en construcción: la importación del Excel, el
+            tarifario y la descarga del PDF se habilitarán en las siguientes
+            fases.
             {!can(actor, 'cotizacion.crear').permitido &&
-              ' Tu cuenta es de solo lectura: podrás consultar y descargar, no editar.'}
+              ' Tu cuenta es de solo lectura: puedes consultar y descargar, no editar.'}
           </p>
           <Link
             href="/api/health"

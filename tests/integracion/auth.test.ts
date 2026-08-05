@@ -178,6 +178,38 @@ describe('bitácora', () => {
     expect(eventos[0]!.resumen).toContain('a $150,000')
   })
 
+  it('dos acciones distintas sobre lo mismo NO se funden', async () => {
+    // Ajustar un precio y revertirlo comparten la celda y caen en la misma
+    // ventana de cinco minutos. Si se fundieran, el registro diría "ajustó"
+    // cuando lo que pasó fue "revirtió" — y la bitácora dejaría de servir para
+    // lo único que sirve: saber qué ocurrió.
+    const clave = 'precio|q9|RONNY|TIKTOK'
+    await prisma.$transaction(async (tx) => {
+      await append(tx, {
+        actor, categoria: 'COTIZACION', accion: 'prueba.ajustado',
+        resumen: 'ajustó de $90,000 a $80,000',
+        cambios: { precio: { antes: '$90,000', despues: '$80,000' } },
+        coalescerPor: clave,
+      })
+    })
+    await prisma.$transaction(async (tx) => {
+      await append(tx, {
+        actor, categoria: 'COTIZACION', accion: 'prueba.revertido',
+        resumen: 'quitó el ajuste: vuelve al tarifario ($90,000)',
+        cambios: { precio: { antes: '$80,000', despues: '$90,000' } },
+        coalescerPor: clave,
+      })
+    })
+
+    const eventos = await prisma.bitacora.findMany({
+      where: { accion: { in: ['prueba.ajustado', 'prueba.revertido'] } },
+      orderBy: { ocurridoEn: 'asc' },
+    })
+    expect(eventos.map((e) => e.accion)).toEqual([
+      'prueba.ajustado', 'prueba.revertido',
+    ])
+  })
+
   it('no se puede borrar: la tabla es de solo inserción', async () => {
     await prisma.$transaction(async (tx) => {
       await append(tx, {
