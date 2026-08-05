@@ -1,0 +1,1216 @@
+{
+  "version": 1,
+  "paginas": [
+    {
+      "numero": 1,
+      "ancho": 612.0,
+      "alto": 792.0,
+      "lineas": [
+        {
+          "top": 200.474,
+          "runs": [
+            {
+              "texto": "KATANA TALENT",
+              "x0": 40.016,
+              "x1": 110.093,
+              "top": 200.474,
+              "tam": 8.3,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            }
+          ]
+        },
+        {
+          "top": 213.689,
+          "runs": [
+            {
+              "texto": "Tabulador de Tarifas",
+              "x0": 40.016,
+              "x1": 226.9,
+              "top": 213.689,
+              "tam": 19.0,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            }
+          ]
+        },
+        {
+          "top": 245.826,
+          "runs": [
+            {
+              "texto": "CLIENTE",
+              "x0": 79.724,
+              "x1": 110.526,
+              "top": 246.746,
+              "tam": 7.2,
+              "estilo": "Bold",
+              "color": "#9A92A6"
+            },
+            {
+              "texto": "HONOR",
+              "x0": 147.756,
+              "x1": 184.976,
+              "top": 245.826,
+              "tam": 10.0,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            },
+            {
+              "texto": "CONTACTO",
+              "x0": 312.165,
+              "x1": 352.961,
+              "top": 246.746,
+              "tam": 7.2,
+              "estilo": "Bold",
+              "color": "#9A92A6"
+            },
+            {
+              "texto": "Fer Nicolini",
+              "x0": 385.866,
+              "x1": 440.326,
+              "top": 245.826,
+              "tam": 10.0,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            }
+          ]
+        },
+        {
+          "top": 272.826,
+          "runs": [
+            {
+              "texto": "AGENTE",
+              "x0": 79.724,
+              "x1": 109.727,
+              "top": 273.746,
+              "tam": 7.2,
+              "estilo": "Bold",
+              "color": "#9A92A6"
+            },
+            {
+              "texto": "Chuy Gallardo",
+              "x0": 147.756,
+              "x1": 216.106,
+              "top": 272.826,
+              "tam": 10.0,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            },
+            {
+              "texto": "MONEDA",
+              "x0": 312.165,
+              "x1": 344.162,
+              "top": 273.746,
+              "tam": 7.2,
+              "estilo": "Bold",
+              "color": "#9A92A6"
+            },
+            {
+              "texto": "MXN",
+              "x0": 385.866,
+              "x1": 408.086,
+              "top": 272.826,
+              "tam": 10.0,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            }
+          ]
+        },
+        {
+          "top": 312.474,
+          "runs": [
+            {
+              "texto": "TIKTOK + REEL",
+              "x0": 376.802,
+              "x1": 439.293,
+              "top": 312.474,
+              "tam": 8.3,
+              "estilo": "Bold",
+              "color": "#FFFFFF"
+            }
+          ]
+        },
+        {
+          "top": 317.724,
+          "runs": [
+            {
+              "texto": "TALENTO",
+              "x0": 78.724,
+              "x1": 117.917,
+              "top": 317.724,
+              "tam": 8.3,
+              "estilo": "Bold",
+              "color": "#FFFFFF"
+            },
+            {
+              "texto": "TIKTOK",
+              "x0": 225.357,
+              "x1": 256.249,
+              "top": 317.724,
+              "tam": 8.3,
+              "estilo": "Bold",
+              "color": "#FFFFFF"
+            },
+            {
+              "texto": "REEL (IG)",
+              "x0": 300.805,
+              "x1": 339.541,
+              "top": 317.724,
+              "tam": 8.3,
+              "estilo": "Bold",
+              "color": "#FFFFFF"
+            },
+            {
+              "texto": "STORY (IG)",
+              "x0": 476.159,
+              "x1": 521.353,
+              "top": 317.724,
+              "tam": 8.3,
+              "estilo": "Bold",
+              "color": "#FFFFFF"
+            }
+          ]
+        },
+        {
+          "top": 322.974,
+          "runs": [
+            {
+              "texto": "(ESPEJO)",
+              "x0": 388.675,
+              "x1": 427.419,
+              "top": 322.974,
+              "tam": 8.3,
+              "estilo": "Bold",
+              "color": "#FFFFFF"
+            }
+          ]
+        },
+        {
+          "top": 349.743,
+          "runs": [
+            {
+              "texto": "Mariel Estrella",
+              "x0": 78.724,
+              "x1": 144.5,
+              "top": 349.764,
+              "tam": 9.7,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            },
+            {
+              "texto": "$100,000",
+              "x0": 220.787,
+              "x1": 260.819,
+              "top": 349.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$120,000",
+              "x0": 300.157,
+              "x1": 340.189,
+              "top": 349.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$150,000",
+              "x0": 388.031,
+              "x1": 428.063,
+              "top": 349.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$40,000",
+              "x0": 481.409,
+              "x1": 516.103,
+              "top": 349.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            }
+          ]
+        },
+        {
+          "top": 378.243,
+          "runs": [
+            {
+              "texto": "Tony Gastélum",
+              "x0": 78.724,
+              "x1": 148.797,
+              "top": 378.264,
+              "tam": 9.7,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            },
+            {
+              "texto": "$30,000",
+              "x0": 223.456,
+              "x1": 258.15,
+              "top": 378.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$60,000",
+              "x0": 302.826,
+              "x1": 337.52,
+              "top": 378.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$80,000",
+              "x0": 390.7,
+              "x1": 425.394,
+              "top": 378.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$25,000",
+              "x0": 481.409,
+              "x1": 516.103,
+              "top": 378.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            }
+          ]
+        },
+        {
+          "top": 406.743,
+          "runs": [
+            {
+              "texto": "Yoiker",
+              "x0": 78.724,
+              "x1": 108.377,
+              "top": 406.764,
+              "tam": 9.7,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            },
+            {
+              "texto": "$25,000",
+              "x0": 223.456,
+              "x1": 258.15,
+              "top": 406.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$40,000",
+              "x0": 302.826,
+              "x1": 337.52,
+              "top": 406.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$60,000",
+              "x0": 390.7,
+              "x1": 425.394,
+              "top": 406.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$20,000",
+              "x0": 481.409,
+              "x1": 516.103,
+              "top": 406.743,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            }
+          ]
+        },
+        {
+          "top": 435.243,
+          "runs": [
+            {
+              "texto": "Ronny",
+              "x0": 78.724,
+              "x1": 108.901,
+              "top": 435.264,
+              "tam": 9.7,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            },
+            {
+              "texto": "$90,000",
+              "x0": 223.456,
+              "x1": 258.15,
+              "top": 435.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$130,000",
+              "x0": 300.157,
+              "x1": 340.189,
+              "top": 435.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$150,000",
+              "x0": 388.031,
+              "x1": 428.063,
+              "top": 435.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            },
+            {
+              "texto": "$40,000",
+              "x0": 481.409,
+              "x1": 516.103,
+              "top": 435.243,
+              "tam": 9.6,
+              "estilo": "Bold",
+              "color": "#1E3A8A"
+            }
+          ]
+        },
+        {
+          "top": 468.55,
+          "runs": [
+            {
+              "texto": "Consideraciones",
+              "x0": 40.016,
+              "x1": 148.799,
+              "top": 468.55,
+              "tam": 13.5,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            }
+          ]
+        },
+        {
+          "top": 489.619,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 489.619,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Tarifas expresadas en pesos mexicanos (MXN).",
+              "x0": 52.016,
+              "x1": 249.08,
+              "top": 489.619,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 505.419,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 505.419,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "No incluyen IVA.",
+              "x0": 52.016,
+              "x1": 123.548,
+              "top": 505.419,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 521.219,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 521.219,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "No incluyen producción.",
+              "x0": 52.016,
+              "x1": 153.059,
+              "top": 521.219,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 537.019,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 537.019,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "No incluyen viáticos.",
+              "x0": 52.016,
+              "x1": 139.046,
+              "top": 537.019,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 552.819,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 552.819,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "No incluyen derechos de uso de imagen.",
+              "x0": 52.016,
+              "x1": 220.1,
+              "top": 552.819,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 568.619,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 568.619,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "No incluyen pauta digital (whitelisting).",
+              "x0": 52.016,
+              "x1": 210.074,
+              "top": 568.619,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 584.419,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 584.419,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "No incluyen exclusividad.",
+              "x0": 52.016,
+              "x1": 158.054,
+              "top": 584.419,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 600.219,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 600.219,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Sujetas a disponibilidad del talento.",
+              "x0": 52.016,
+              "x1": 198.095,
+              "top": 600.219,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 616.019,
+          "runs": [
+            {
+              "texto": "•",
+              "x0": 52.016,
+              "x1": 52.016,
+              "top": 616.019,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Sujetas a confirmación y aprobación final por Katana Talent.",
+              "x0": 52.016,
+              "x1": 297.635,
+              "top": 616.019,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 642.75,
+          "runs": [
+            {
+              "texto": "Términos y Condiciones",
+              "x0": 40.016,
+              "x1": 196.805,
+              "top": 642.75,
+              "tam": 13.5,
+              "estilo": "Bold",
+              "color": "#3D0070"
+            }
+          ]
+        },
+        {
+          "top": 663.819,
+          "runs": [
+            {
+              "texto": "1.",
+              "x0": 52.016,
+              "x1": 59.522,
+              "top": 663.819,
+              "tam": 9.0,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Vigencia de este tabulador: 15 días naturales a partir de la fecha de envío.",
+              "x0": 59.522,
+              "x1": 361.697,
+              "top": 663.819,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 679.619,
+          "runs": [
+            {
+              "texto": "2.",
+              "x0": 52.016,
+              "x1": 59.522,
+              "top": 679.619,
+              "tam": 9.0,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Los precios podrán actualizarse sin previo aviso una vez concluida la vigencia.",
+              "x0": 59.522,
+              "x1": 378.158,
+              "top": 679.619,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 695.419,
+          "runs": [
+            {
+              "texto": "3.",
+              "x0": 52.016,
+              "x1": 59.522,
+              "top": 695.419,
+              "tam": 9.0,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "La confirmación de talento, fechas y entregables está sujeta a disponibilidad al momento de la solicitud.",
+              "x0": 59.522,
+              "x1": 477.725,
+              "top": 695.419,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 711.219,
+          "runs": [
+            {
+              "texto": "4.",
+              "x0": 52.016,
+              "x1": 59.522,
+              "top": 711.219,
+              "tam": 9.0,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Toda campaña incluye hasta dos (2) rondas de cambios sobre el alcance aprobado; cada ronda adicional tendrá un costo",
+              "x0": 59.522,
+              "x1": 549.77,
+              "top": 711.219,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 724.419,
+          "runs": [
+            {
+              "texto": "equivalente al 10% del valor del entregable afectado.",
+              "x0": 52.016,
+              "x1": 263.633,
+              "top": 724.419,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 765.189,
+          "runs": [
+            {
+              "texto": "Katana Talent · Información confidencial",
+              "x0": 34.016,
+              "x1": 162.802,
+              "top": 765.189,
+              "tam": 7.0,
+              "estilo": "Regular",
+              "color": "#9A92A6"
+            },
+            {
+              "texto": "Pág. 1",
+              "x0": 557.747,
+              "x1": 577.984,
+              "top": 765.189,
+              "tam": 7.0,
+              "estilo": "Regular",
+              "color": "#9A92A6"
+            }
+          ]
+        }
+      ],
+      "rects": [
+        {
+          "x0": 0.0,
+          "top": 0.0,
+          "x1": 612.0,
+          "bottom": 17.008,
+          "relleno": "#7B2FBE"
+        },
+        {
+          "x0": 70.724,
+          "top": 236.756,
+          "x1": 541.276,
+          "bottom": 290.756,
+          "relleno": "#FBF9FE"
+        },
+        {
+          "x0": 70.724,
+          "top": 302.756,
+          "x1": 541.276,
+          "bottom": 339.756,
+          "relleno": "#7B2FBE"
+        },
+        {
+          "x0": 70.724,
+          "top": 339.756,
+          "x1": 541.276,
+          "bottom": 368.256,
+          "relleno": "#FFFFFF"
+        },
+        {
+          "x0": 70.724,
+          "top": 368.256,
+          "x1": 541.276,
+          "bottom": 396.756,
+          "relleno": "#FBF9FE"
+        },
+        {
+          "x0": 70.724,
+          "top": 396.756,
+          "x1": 541.276,
+          "bottom": 425.256,
+          "relleno": "#FFFFFF"
+        },
+        {
+          "x0": 70.724,
+          "top": 425.256,
+          "x1": 541.276,
+          "bottom": 453.756,
+          "relleno": "#FBF9FE"
+        }
+      ],
+      "trazos": [
+        {
+          "x0": 70.724,
+          "top": 236.456,
+          "x1": 541.276,
+          "bottom": 237.056,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.424,
+          "top": 236.756,
+          "x1": 71.024,
+          "bottom": 290.756,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 540.976,
+          "top": 236.756,
+          "x1": 541.576,
+          "bottom": 290.756,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 263.506,
+          "x1": 541.276,
+          "bottom": 264.006,
+          "color": "#E4DBF0",
+          "grosor": 0.5,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 290.456,
+          "x1": 541.276,
+          "bottom": 291.056,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 302.456,
+          "x1": 541.276,
+          "bottom": 303.056,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.424,
+          "top": 302.756,
+          "x1": 71.024,
+          "bottom": 453.756,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 540.976,
+          "top": 302.756,
+          "x1": 541.576,
+          "bottom": 453.756,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 368.056,
+          "x1": 541.276,
+          "bottom": 368.456,
+          "color": "#E4DBF0",
+          "grosor": 0.4,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 396.556,
+          "x1": 541.276,
+          "bottom": 396.956,
+          "color": "#E4DBF0",
+          "grosor": 0.4,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 425.056,
+          "x1": 541.276,
+          "bottom": 425.456,
+          "color": "#E4DBF0",
+          "grosor": 0.4,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 453.456,
+          "x1": 541.276,
+          "bottom": 454.056,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 70.724,
+          "top": 453.556,
+          "x1": 541.276,
+          "bottom": 453.956,
+          "color": "#E4DBF0",
+          "grosor": 0.4,
+          "forma": "linea"
+        },
+        {
+          "x0": 34.016,
+          "top": 760.469,
+          "x1": 577.984,
+          "bottom": 761.169,
+          "color": "#E4DBF0",
+          "grosor": 0.7,
+          "forma": "linea"
+        }
+      ],
+      "imagenes": [
+        {
+          "x0": 34.016,
+          "top": 42.52,
+          "x1": 153.071,
+          "bottom": 84.363
+        }
+      ]
+    },
+    {
+      "numero": 2,
+      "ancho": 612.0,
+      "alto": 792.0,
+      "lineas": [
+        {
+          "top": 25.63,
+          "runs": [
+            {
+              "texto": "Katana Talent × HONOR",
+              "x0": 500.368,
+              "x1": 577.984,
+              "top": 25.63,
+              "tam": 7.0,
+              "estilo": "Regular",
+              "color": "#9A92A6"
+            }
+          ]
+        },
+        {
+          "top": 126.918,
+          "runs": [
+            {
+              "texto": "5.",
+              "x0": 52.016,
+              "x1": 59.522,
+              "top": 126.918,
+              "tam": 9.0,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Producción, viáticos, hospedaje, traslados, derechos adicionales, pauta y exclusividad se cotizan por separado, salvo que se",
+              "x0": 59.522,
+              "x1": 562.262,
+              "top": 126.918,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 140.118,
+          "runs": [
+            {
+              "texto": "indiquen expresamente como incluidos.",
+              "x0": 52.016,
+              "x1": 210.083,
+              "top": 140.118,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 155.918,
+          "runs": [
+            {
+              "texto": "6.",
+              "x0": 52.016,
+              "x1": 59.522,
+              "top": 155.918,
+              "tam": 9.0,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "El pago y forma de facturación se definen en la orden de compra o contrato correspondiente a cada proyecto.",
+              "x0": 59.522,
+              "x1": 501.755,
+              "top": 155.918,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 171.718,
+          "runs": [
+            {
+              "texto": "7.",
+              "x0": 52.016,
+              "x1": 59.522,
+              "top": 171.718,
+              "tam": 9.0,
+              "estilo": "Bold",
+              "color": "#7B2FBE"
+            },
+            {
+              "texto": "Esta cotización es de carácter informativo y no representa una confirmación de talento hasta contar con aprobación comercial",
+              "x0": 59.522,
+              "x1": 566.249,
+              "top": 171.718,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 184.918,
+          "runs": [
+            {
+              "texto": "de Katana Talent.",
+              "x0": 52.016,
+              "x1": 123.062,
+              "top": 184.918,
+              "tam": 9.0,
+              "estilo": "Regular",
+              "color": "#1C1326"
+            }
+          ]
+        },
+        {
+          "top": 218.553,
+          "runs": [
+            {
+              "texto": "Confidencialidad.",
+              "x0": 44.016,
+              "x1": 112.363,
+              "top": 218.553,
+              "tam": 8.2,
+              "estilo": "Bold",
+              "color": "#5E5566"
+            },
+            {
+              "texto": "La información de este documento —tarifas, contactos y condiciones comerciales— es confidencial entre Katana Talent y",
+              "x0": 112.363,
+              "x1": 558.549,
+              "top": 218.553,
+              "tam": 8.2,
+              "estilo": "Regular",
+              "color": "#5E5566"
+            }
+          ]
+        },
+        {
+          "top": 230.153,
+          "runs": [
+            {
+              "texto": "HONOR, y no podrá compartirse con terceros sin autorización previa.",
+              "x0": 44.016,
+              "x1": 296.477,
+              "top": 230.153,
+              "tam": 8.2,
+              "estilo": "Regular",
+              "color": "#5E5566"
+            }
+          ]
+        },
+        {
+          "top": 259.628,
+          "runs": [
+            {
+              "texto": "Katana Talent · Representación · Influencer Marketing · Sports & Entertainment · chuygallardo@katanatalent.com",
+              "x0": 40.016,
+              "x1": 421.999,
+              "top": 259.628,
+              "tam": 7.6,
+              "estilo": "Regular",
+              "color": "#9A92A6"
+            }
+          ]
+        },
+        {
+          "top": 765.189,
+          "runs": [
+            {
+              "texto": "Katana Talent · Información confidencial",
+              "x0": 34.016,
+              "x1": 162.802,
+              "top": 765.189,
+              "tam": 7.0,
+              "estilo": "Regular",
+              "color": "#9A92A6"
+            },
+            {
+              "texto": "Pág. 2",
+              "x0": 557.747,
+              "x1": 577.984,
+              "top": 765.189,
+              "tam": 7.0,
+              "estilo": "Regular",
+              "color": "#9A92A6"
+            }
+          ]
+        }
+      ],
+      "rects": [
+        {
+          "x0": 34.016,
+          "top": 208.855,
+          "x1": 577.984,
+          "bottom": 248.055,
+          "relleno": "#FBF9FE"
+        }
+      ],
+      "trazos": [
+        {
+          "x0": 34.016,
+          "top": 36.5,
+          "x1": 577.984,
+          "bottom": 37.2,
+          "color": "#E4DBF0",
+          "grosor": 0.7,
+          "forma": "linea"
+        },
+        {
+          "x0": 34.016,
+          "top": 208.555,
+          "x1": 577.984,
+          "bottom": 209.155,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 32.516,
+          "top": 208.855,
+          "x1": 35.516,
+          "bottom": 248.055,
+          "color": "#7B2FBE",
+          "grosor": 3.0,
+          "forma": "linea"
+        },
+        {
+          "x0": 33.716,
+          "top": 208.855,
+          "x1": 34.316,
+          "bottom": 248.055,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 577.684,
+          "top": 208.855,
+          "x1": 578.284,
+          "bottom": 248.055,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 34.016,
+          "top": 247.755,
+          "x1": 577.984,
+          "bottom": 248.355,
+          "color": "#E4DBF0",
+          "grosor": 0.6,
+          "forma": "linea"
+        },
+        {
+          "x0": 34.016,
+          "top": 760.469,
+          "x1": 577.984,
+          "bottom": 761.169,
+          "color": "#E4DBF0",
+          "grosor": 0.7,
+          "forma": "linea"
+        }
+      ],
+      "imagenes": [
+        {
+          "x0": 34.016,
+          "top": 31.181,
+          "x1": 102.047,
+          "bottom": 55.092
+        }
+      ]
+    }
+  ]
+}

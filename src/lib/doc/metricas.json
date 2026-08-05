@@ -1,0 +1,19 @@
+{
+  "_comentario": "GENERADO por tools/calibrar.py. No editar a mano. desfaseLineaBase[estilo@tamaño] = top medido en el PDF menos el top de CSS, con line-height:1. Para reproducir una coordenada del original: cssTop = topDelPDF − desfase.",
+  "desfaseLineaBase": {
+    "Bold@10.0": -3.248,
+    "Bold@13.5": -3.75,
+    "Bold@19.0": -5.498,
+    "Bold@7.2": -2.7,
+    "Bold@8.2": -2.948,
+    "Bold@8.3": -2.295,
+    "Bold@9.0": -3.0,
+    "Bold@9.6": -3.6,
+    "Bold@9.7": -3.698,
+    "Regular@7.0": -2.498,
+    "Regular@7.6": -2.348,
+    "Regular@8.2": -2.948,
+    "Regular@9.0": -3.0
+  },
+  "dispersionMaximaPt": 0.64
+}

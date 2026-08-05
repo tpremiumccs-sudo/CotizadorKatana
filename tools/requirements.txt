@@ -1,0 +1,5 @@
+# Herramientas de fidelidad del documento (tools/*.py).
+# Instalación:  python3 -m venv .venv && .venv/bin/pip install -r tools/requirements.txt
+pdfplumber==0.11.4
+fonttools==4.55.3
+brotli==1.1.0
