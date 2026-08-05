@@ -17,7 +17,6 @@ import { documentoHonor } from '../fixtures/datos-honor'
 
 const RAIZ = join(import.meta.dirname, '../..')
 const PY = join(RAIZ, '.venv/bin/python')
-const ORIGINAL = join(RAIZ, 'tests/fixtures/honor_tabulador_original.pdf')
 const BASELINE = join(RAIZ, 'tests/fixtures/honor_baseline.json')
 
 let pdfGenerado: string
