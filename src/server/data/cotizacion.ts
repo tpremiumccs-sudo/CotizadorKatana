@@ -38,7 +38,10 @@ export class ConflictoRevisionError extends Error {
 
 const TITULO_CONSIDERACIONES = 'Consideraciones'
 const TITULO_TERMINOS = 'Términos y Condiciones'
-const TITULO_CONFIDENCIALIDAD = 'Confidencialidad'
+// Con punto: así está en el documento original de la agencia. Sin él, el
+// oráculo de fidelidad marca la diferencia — y con razón, es lo que reciben
+// las marcas desde hace tiempo.
+const TITULO_CONFIDENCIALIDAD = 'Confidencialidad.'
 
 // ─────────────────────────────── Lectura ───────────────────────────────
 

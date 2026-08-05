@@ -129,6 +129,16 @@ export function FormularioNueva({
             ({talentosElegidos.size} elegido{talentosElegidos.size === 1 ? '' : 's'})
           </span>
         </legend>
+        {talentosElegidos.size > 0 && (
+          <p className="text-xs text-tinta-suave">
+            Saldrán en este orden:{' '}
+            <span className="font-medium text-tinta">
+              {[...talentosElegidos]
+                .map((id) => talentos.find((t) => t.id === id)?.nombre ?? '')
+                .join(' · ')}
+            </span>
+          </p>
+        )}
         <input
           type="search"
           value={busqueda}
@@ -151,7 +161,6 @@ export function FormularioNueva({
               >
                 <input
                   type="checkbox"
-                  name="talento"
                   value={t.id}
                   checked={talentosElegidos.has(t.id)}
                   onChange={() => alternar(setTalentos, t.id)}
@@ -195,7 +204,6 @@ export function FormularioNueva({
               >
                 <input
                   type="checkbox"
-                  name="formato"
                   value={f.id}
                   checked={formatosElegidos.has(f.id)}
                   onChange={() => alternar(setFormatos, f.id)}
@@ -215,6 +223,20 @@ export function FormularioNueva({
           </p>
         )}
       </fieldset>
+
+      {/*
+        El orden IMPORTA: es el de las filas y las columnas del documento, y no
+        tiene por qué ser alfabético — el tabulador de HONOR real va Mariel,
+        Tony, Yoiker, Ronny. Las casillas se envían en el orden del DOM, así que
+        el valor viaja en estos campos ocultos, que van en el orden en que se
+        marcaron (un Set de JavaScript conserva el orden de inserción).
+      */}
+      {[...talentosElegidos].map((id) => (
+        <input key={id} type="hidden" name="talento" value={id} />
+      ))}
+      {[...formatosElegidos].map((id) => (
+        <input key={id} type="hidden" name="formato" value={id} />
+      ))}
 
       <Boton habilitado={talentosElegidos.size > 0 && formatosElegidos.size > 0} />
     </form>
