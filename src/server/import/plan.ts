@@ -13,7 +13,8 @@ import { detectHeaderRow, indicePorCanonico, esFilaCentinela } from './header'
 import { parsePrice } from './parse-price'
 import { parseFollowerCount } from './parse-metric'
 import {
-  resolveIdentity, normalizeName, extractVariants, type TalentoConocido,
+  resolveIdentity, normalizeName, extractVariants, ALIAS_SEMBRADOS,
+  type TalentoConocido,
 } from './identity'
 import { FORMATOS } from './catalogo'
 import { buscarHoja } from './workbook'
@@ -69,6 +70,33 @@ const PLATAFORMAS_TALENTOS: Array<{ header: string; plataforma: string }> = [
   { header: 'TikTok seguidores', plataforma: 'TIKTOK' },
   { header: 'YouTube subs', plataforma: 'YOUTUBE' },
 ]
+
+/**
+ * Alias sembrados a mano, indexados por nombre normalizado.
+ *
+ * Son las equivalencias que ninguna métrica de similitud puede inferir:
+ * "Ronny" ↔ "Ronaldo BXM" da 0.44, y "Mar Coronel" ↔ "Mariely Coronel" 0.73
+ * contra nombres que sí son de personas distintas.
+ */
+const DISPLAY_PREFERIDO = new Map<string, string>(
+  ALIAS_SEMBRADOS.filter((a) => a.displayPreferido).map(
+    (a) => [a.codigo, a.displayPreferido!] as const,
+  ),
+)
+
+const CODIGO_POR_ALIAS = new Map<string, string>(
+  ALIAS_SEMBRADOS.flatMap((a) =>
+    a.alias.map((n) => [normalizeName(n), a.codigo] as const),
+  ),
+)
+
+function codigoPorAlias(variantes: readonly string[]): string | undefined {
+  for (const v of variantes) {
+    const c = CODIGO_POR_ALIAS.get(v)
+    if (c) return c
+  }
+  return undefined
+}
 
 function texto(v: ValorCelda): string {
   if (v === null || v === undefined) return ''
@@ -165,6 +193,21 @@ export function buildImportPlan(
       }
     }
 
+    // Alias sembrados a mano. Hacen falta ya en esta fase, no sólo al aplicar:
+    // PERFIL COMERCIAL llama "Mar Coronel" (KT-008) a quien TARIFARIO llama
+    // "Mariely Coronel", y ninguna métrica relaciona ambos nombres. Sin esto la
+    // primera importación crea dos talentos y las tarifas cuelgan del que no
+    // tiene código.
+    const codigoSembrado = codigoPorAlias(variantes)
+    if (codigoSembrado) {
+      for (const e of new Set(porNormalizado.values())) {
+        if (e.codigo === codigoSembrado) {
+          porNormalizado.set(normalizado, e)
+          return e
+        }
+      }
+    }
+
     const identidad = resolveIdentity(crudo, ctx.talentosConocidos)
 
     // Si esta identidad ya tiene entrada bajo otra grafía, se reutiliza.
@@ -183,7 +226,7 @@ export function buildImportPlan(
       normalizado,
       accion: auto ? 'SIN_CAMBIOS' : 'CREAR',
       talentIdExistente: auto ? (identidad.mejor?.talentId ?? null) : null,
-      codigo: auto ? (identidad.mejor?.codigo ?? null) : null,
+      codigo: (auto ? identidad.mejor?.codigo : null) ?? codigoSembrado ?? null,
       displayName: auto ? (identidad.mejor?.displayName ?? crudo) : crudo,
       identidad: auto ? undefined : identidad,
       cambiosTalento: {},
@@ -201,6 +244,12 @@ export function buildImportPlan(
       })
     }
     porNormalizado.set(normalizado, e)
+    if (e.codigo) {
+      for (const a of ALIAS_SEMBRADOS.find((x) => x.codigo === e.codigo)?.alias ?? []) {
+        const n = normalizeName(a)
+        if (n && !porNormalizado.has(n)) porNormalizado.set(n, e)
+      }
+    }
     // También se indexa por las otras grafías conocidas de esta identidad, para
     // que la siguiente hoja del mismo archivo caiga en esta misma entrada.
     if (identidad.mejor) {
@@ -239,7 +288,11 @@ export function buildImportPlan(
 
           const e = entrada(canon)
           e.codigo ??= codigo
-          const display = cDisplay != null ? texto(fila[cDisplay]) : ''
+          // El nombre preferido manda sobre el del Excel cuando existe: es el
+          // que la marca ve impreso en el documento.
+          const display =
+            (e.codigo ? DISPLAY_PREFERIDO.get(e.codigo) : undefined) ??
+            (cDisplay != null ? texto(fila[cDisplay]) : '')
           if (display) {
             e.displayName = display
             // "Kike Padilla" en PERFIL es "Kike Padilla / Rookie Leagues" en

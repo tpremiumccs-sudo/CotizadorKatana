@@ -149,11 +149,12 @@ describe('segunda importación (idempotencia)', () => {
 
   it('una tarifa editada a mano en la app se marca como conflicto y se conserva', () => {
     const primero = buildImportPlan(crm, 'CRM_COMERCIAL', ctxVacio('CRM.xlsx', bufCrm))
-    const ronny = primero.talentos.find((t) => t.crudo === 'Ronny')!
+    // Se busca por código: la grafía depende de qué hoja se leyó primero.
+    const ronny = primero.talentos.find((t) => t.codigo === 'KT-004')!
 
     const conocidos: TalentoConocido[] = [{
-      talentId: 'ronny-id', codigo: ronny.codigo, canonicalName: 'Ronny',
-      displayName: 'Ronny', identificadores: ['ronny'],
+      talentId: 'ronny-id', codigo: ronny.codigo, canonicalName: 'Ronaldo BXM',
+      displayName: 'Ronny', identificadores: ['ronny', 'ronaldo bxm'],
     }]
 
     // El usuario bajó el espejo de Ronny a $150,000 dentro de la app; el Excel
@@ -172,7 +173,7 @@ describe('segunda importación (idempotencia)', () => {
       archivo: 'CRM.xlsx', sha256: sha256(bufCrm),
     })
 
-    const ronny2 = segundo.talentos.find((t) => t.crudo === 'Ronny')!
+    const ronny2 = segundo.talentos.find((t) => t.codigo === 'KT-004')!
     const espejo = ronny2.cambiosTarifas.find((c) => c.deliverableCode === 'TIKTOK_REEL_MIRROR')
 
     expect(espejo).toBeDefined()

@@ -290,14 +290,23 @@ export function resolveIdentity(
  * Sin ellos, la primera importación crearía talentos duplicados justo para los
  * perfiles con más movimiento comercial.
  */
-export const ALIAS_SEMBRADOS: Array<{ codigo: string; alias: string[] }> = [
-  { codigo: 'KT-004', alias: ['Ronny', 'Ronaldo BXM', 'Ronny (Ronaldo López)', 'Ronaldo López', 'Ronaldo “Ronny” BXM'] },
-  { codigo: 'KT-008', alias: ['Mar Coronel', 'Mariely Coronel', 'Mariely', 'Marieli Coronel'] },
+export const ALIAS_SEMBRADOS: Array<{
+  codigo: string
+  alias: string[]
+  /**
+   * Cómo debe imprimirse en un documento, cuando difiere del nombre canónico
+   * del CRM. El tabulador de HONOR dice "Ronny", no "Ronaldo BXM"; y
+   * "Kike Padilla / Rookie Leagues" no cabe en la columna de talento.
+   */
+  displayPreferido?: string
+}> = [
+  { codigo: 'KT-004', displayPreferido: 'Ronny', alias: ['Ronny', 'Ronaldo BXM', 'Ronny (Ronaldo López)', 'Ronaldo López', 'Ronaldo “Ronny” BXM'] },
+  { codigo: 'KT-008', displayPreferido: 'Mariely Coronel', alias: ['Mar Coronel', 'Mariely Coronel', 'Mariely', 'Marieli Coronel'] },
   { codigo: 'KT-001', alias: ['Divino Espinosa', 'Divino Espinoza', 'Rafael Divino Espinoza'] },
   { codigo: 'KT-005', alias: ['Tejon de la Miel', 'Tejón de la Miel', 'Tadeo Magno'] },
   { codigo: 'KT-006', alias: ['Mama Tejona', 'Mamá Tejona'] },
   { codigo: 'KT-012', alias: ['Tony Gastelum', 'Tony Gastélum'] },
-  { codigo: 'KT-014', alias: ['Kike Padilla', 'Kike Padilla / Rookie Leagues', 'Rookie Leagues'] },
+  { codigo: 'KT-014', displayPreferido: 'Kike Padilla', alias: ['Kike Padilla', 'Kike Padilla / Rookie Leagues', 'Rookie Leagues'] },
   { codigo: 'KT-016', alias: ['Mike Maquina del Mal', 'Mike Máquina del Mal', 'Mike “Máquina del Mal”'] },
   { codigo: 'KT-027', alias: ['Juan de Dios', 'Juan de Dios García', 'Juan de Dios G'] },
   { codigo: 'KT-028', alias: ['Padigol', 'Padigol / Santiago Padilla', 'Santiago Padilla'] },

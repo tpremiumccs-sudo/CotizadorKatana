@@ -37,9 +37,13 @@ const config = [
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/server/data/**', 'src/lib/db.ts', 'src/app/api/health/**'],
     rules: {
-      'no-restricted-imports': [
+      // La variante de typescript-eslint entiende `import type`, que se borra
+      // al compilar y por tanto no viola nada.
+      'no-restricted-imports': 'off',
+      '@typescript-eslint/no-restricted-imports': [
         'error',
         {
+          allowTypeImports: true,
           paths: [
             {
               name: '@/lib/db',
