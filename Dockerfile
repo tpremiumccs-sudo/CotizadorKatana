@@ -81,6 +81,26 @@ RUN npx --yes playwright@1.56.0 install --with-deps chromium \
 # falta: esa lista se rompe en cuanto Prisma cambie de dependencias.
 FROM ${NODE_IMAGE} AS prisma-cli
 WORKDIR /cli
+
+# `openssl` NO es decorativo aquí, y su ausencia costó una construcción entera.
+#
+# El postinstall de @prisma/engines descarga el motor QUE CORRESPONDA a la
+# versión de libssl que detecte. Si no detecta ninguna, Prisma no falla: se va
+# a su valor por omisión, que es `1.1.x`:
+#
+#     const defaultLibssl = "1.1.x"
+#     "Prisma failed to detect the libssl/openssl version to use, and may not
+#      work as expected. Defaulting to openssl-1.1.x."
+#
+# Esta etapa salía de un node:22-bookworm-slim pelado, así que se bajaba
+# `schema-engine-debian-openssl-1.1.x`. Pero bookworm lleva OpenSSL 3.0, y la
+# etapa de ejecución sí lo tiene instalado: allí el CLI calcula
+# `debian-openssl-3.0.x`, ese motor no existe, y `migrate deploy` muere al
+# arrancar el contenedor. La etapa `deps` ya instalaba openssl —por eso todo lo
+# demás funcionaba— y ésta se quedó sin él.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 # SIN `--ignore-scripts`, al revés que la etapa `deps`: el postinstall de
 # `@prisma/engines` es quien descarga el **schema-engine**, que es el binario
 # que `migrate deploy` usa. Saltándolo, el CLI intentaría bajárselo de
@@ -100,6 +120,18 @@ RUN PV="$(node -p "require('/tmp/version-prisma.json').devDependencies.prisma")"
     && echo "[imagen] CLI de Prisma: ${PV}" \
     && npm init -y >/dev/null \
     && npm install --no-audit --no-fund "prisma@${PV}"
+
+# Que el motor descargado sea el de la OpenSSL de esta imagen, comprobado AQUÍ y
+# no al arrancar el contenedor en el servidor de la agencia. Se deriva de
+# `openssl version` en vez de escribir "3.0" a mano, para que siga siendo cierto
+# cuando la imagen base cambie de Debian.
+RUN SSL="$(openssl version | sed -E 's/^OpenSSL ([0-9]+\.[0-9]+).*/\1/')" \
+    && if ! ls node_modules/@prisma/engines/schema-engine-*-openssl-"${SSL}".x >/dev/null 2>&1; then \
+         echo "ERROR: esta imagen tiene OpenSSL ${SSL} y el motor descargado no le corresponde:" >&2; \
+         ls -1 node_modules/@prisma/engines/ | grep -E '^(schema-engine|libquery)' >&2; \
+         exit 1; \
+       fi \
+    && echo "[imagen] schema-engine para OpenSSL ${SSL}: correcto"
 
 # ───────────────────────────── 4. Ejecución ─────────────────────────────
 FROM ${NODE_IMAGE} AS runner

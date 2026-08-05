@@ -183,7 +183,12 @@ jobs:
 
           probar "test -f /opt/prisma-cli/node_modules/prisma/build/index.js" "el CLI de Prisma"
           probar "node /opt/prisma-cli/node_modules/prisma/build/index.js --version" "el CLI arranca (carga @prisma/config, effect y empathic)"
-          probar "ls /opt/prisma-cli/node_modules/@prisma/engines/schema-engine-*" "el schema-engine, que usa migrate deploy"
+          # NO vale con que exista UN schema-engine: el comodín `schema-engine-*`
+          # daba verde teniendo dentro el de OpenSSL 1.1.x en una imagen con
+          # OpenSSL 3.0, que es justo el fallo que dejó el contenedor sin
+          # arrancar. Tiene que ser el de la OpenSSL de ESTA imagen, y la
+          # versión se lee de la imagen en vez de escribirse a mano.
+          probar "SSL=\$(openssl version | sed -E 's/^OpenSSL ([0-9]+\\.[0-9]+).*/\\1/'); ls /opt/prisma-cli/node_modules/@prisma/engines/schema-engine-*-openssl-\${SSL}.x" "el schema-engine es el de la OpenSSL de esta imagen"
           probar "test -f /app/prisma/seed.mjs" "el seed empaquetado"
           probar "test -f /app/prisma/schema.prisma" "el esquema y las migraciones"
           probar "command -v fc-cache" "fc-cache (paquete fontconfig)"
