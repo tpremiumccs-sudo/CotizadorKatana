@@ -38,6 +38,47 @@ verificar_requisitos() {
     grep -n 'CAMBIAR' .env | sed 's/^/    /'
     morir "Edita .env antes de continuar."
   fi
+
+  # La contraseña de Postgres se escribe DOS veces en .env: suelta en
+  # POSTGRES_PASSWORD y embebida dentro de DATABASE_URL. Si divergen, lo que
+  # pasa es de lo peor que puede pasar: la app funciona y el servicio de
+  # respaldos se queda esperando a la base PARA SIEMPRE, con el contenedor en
+  # `running` y la salud en verde. Se descubre el día que hace falta un
+  # respaldo. Mejor cazarlo aquí.
+  local pwd_suelta pwd_url
+  pwd_suelta="$(sed -n 's/^POSTGRES_PASSWORD=//p' .env | tr -d '"'"'"'' | head -1)"
+  pwd_url="$(sed -n 's|^DATABASE_URL=.*://[^:]*:\([^@]*\)@.*|\1|p' .env | head -1)"
+  if [ -n "$pwd_suelta" ] && [ -n "$pwd_url" ] && [ "$pwd_suelta" != "$pwd_url" ]; then
+    rojo "La contraseña de Postgres no coincide entre POSTGRES_PASSWORD y DATABASE_URL."
+    rojo "Deben ser idénticas: si divergen, los respaldos fallan en silencio."
+    morir "Corrige .env antes de continuar."
+  fi
+
+  local libre
+  libre="$(df -Pk . | awk 'NR==2 {print int($4/1024/1024)}')"
+  if [ "${libre:-99}" -lt 8 ]; then
+    rojo "Quedan ${libre} GB libres y la construcción necesita cerca de 8."
+    morir "Libera espacio antes de continuar."
+  fi
+}
+
+# Ningún servicio debe publicar puertos: todo entra por el túnel.
+#
+# Se pregunta al demonio por los puertos de cada contenedor en vez de parsear
+# `docker compose ps --format json` — Compose ≥2.21 emite un único array y el
+# parseo línea a línea reventaba SIEMPRE, cayendo a "(ninguno)" aunque hubiera
+# puertos abiertos. Era una comprobación de seguridad que no comprobaba nada.
+puertos_publicados() {
+  local svc cid puertos hallados=""
+  for svc in $(docker compose config --services); do
+    cid="$(docker compose ps -q "$svc" 2>/dev/null || true)"
+    [ -n "$cid" ] || continue
+    puertos="$(docker port "$cid" 2>/dev/null || true)"
+    [ -n "$puertos" ] || continue
+    hallados="${hallados}${svc}: $(echo "$puertos" | tr '\n' ' ')
+"
+  done
+  printf '%s' "$hallados"
 }
 
 comprobar_salud() {
@@ -60,31 +101,30 @@ comprobar_salud() {
 case "${1:-}" in
   instalar)
     verificar_requisitos
-    info "Construyendo las imágenes (puede tardar varios minutos la primera vez)…"
-    if [ "${BUILD_LOCAL:-0}" = "1" ]; then
-      docker compose build
-    else
-      docker compose pull --ignore-buildable || docker compose build
-    fi
+    # Las imágenes base sí se descargan; la de la app se construye aquí.
+    # (`pull --ignore-buildable` SALTA los servicios con `build:` y sale con 0,
+    # así que el `|| build` de antes nunca se ejecutaba: parecía que traía la
+    # app y no traía nada.)
+    info "Descargando las imágenes base…"
+    docker compose pull --ignore-buildable
+    info "Construyendo la aplicación. La primera vez tarda 15-25 minutos."
+    docker compose build
     info "Levantando los servicios…"
     docker compose up -d --wait
+
+    # El contenedor migra y siembra en su arranque; si algo de eso falla, no
+    # levanta y `up --wait` ya habría fallado. Aquí sólo se confirma.
     comprobar_salud
-    info "Creando el primer usuario administrador…"
-    docker compose exec -T app node node_modules/.bin/tsx prisma/seed.ts || \
-      rojo "AVISO: el seed falló o ya se había ejecutado. Revisa los registros."
     verde ""
     verde "Instalación terminada."
     verde "Entra a: $(grep -E '^APP_PUBLIC_URL=' .env | cut -d= -f2- | tr -d '\"')"
+    info "El primer acceso te pedirá cambiar la contraseña inicial."
     ;;
 
   actualizar)
     verificar_requisitos
-    info "Trayendo la nueva versión…"
-    if [ "${BUILD_LOCAL:-0}" = "1" ]; then
-      docker compose build app
-    else
-      docker compose pull app
-    fi
+    info "Trayendo los cambios y reconstruyendo…"
+    docker compose build app
     info "Reiniciando…"
     docker compose up -d --wait
     comprobar_salud
@@ -95,9 +135,13 @@ case "${1:-}" in
     docker compose ps
     echo ""
     info "Puertos publicados al exterior (debe estar vacío — todo entra por el túnel):"
-    docker compose ps --format json 2>/dev/null \
-      | python3 -c "import sys,json;[print('  '+ (l.get('Publishers') and str(l['Publishers']) or '')) for l in map(json.loads, sys.stdin) if l.get('Publishers')]" \
-      2>/dev/null || echo "  (ninguno)"
+    expuestos="$(puertos_publicados)"
+    if [ -n "$expuestos" ]; then
+      rojo "$expuestos"
+      rojo "Hay puertos abiertos a internet. Revisa docker-compose.yml."
+    else
+      verde "  ninguno"
+    fi
     ;;
 
   logs)

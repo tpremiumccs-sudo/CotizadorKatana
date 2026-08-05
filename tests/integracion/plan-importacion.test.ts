@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { readWorkbook, sha256, detectarTipoArchivo } from '@/server/import/workbook'
 import { buildImportPlan, type ContextoPlan } from '@/server/import/plan'
 import { ALIAS_SEMBRADOS, normalizeName, type TalentoConocido } from '@/server/import/identity'
 import type { PlanImportacion, RejillaHoja } from '@/server/import/types'
+import {
+  ARCHIVO_CRM, ARCHIVO_ROSTER, FALTAN_LOS_XLSX, avisarSiFaltan,
+} from '../fixtures/xlsx-reales'
 
 /**
  * El plan de importación, construido contra los DOS archivos reales.
@@ -14,15 +16,20 @@ import type { PlanImportacion, RejillaHoja } from '@/server/import/types'
  * que aplicar dos veces el mismo archivo no cambia nada la segunda vez.
  */
 
-const DIR = join(import.meta.dirname, '../fixtures/xlsx')
+// Los .xlsx no se versionan: son datos comerciales reales. Sin ellos estas
+// pruebas se omiten con un mensaje, no fallan.
+avisarSiFaltan()
+const describir = FALTAN_LOS_XLSX ? describe.skip : describe
+
 let crm: RejillaHoja[]
 let roster: RejillaHoja[]
 let bufCrm: Buffer
 
 beforeAll(async () => {
-  bufCrm = readFileSync(join(DIR, 'KATANA_ENGINE_CRM_COMERCIAL_2026.xlsx'))
+  if (FALTAN_LOS_XLSX) return
+  bufCrm = readFileSync(ARCHIVO_CRM)
   crm = await readWorkbook(bufCrm)
-  roster = await readWorkbook(readFileSync(join(DIR, 'CRM_Roster_Katana_Actualizado.xlsx')))
+  roster = await readWorkbook(readFileSync(ARCHIVO_ROSTER))
 }, 120_000)
 
 const ctxVacio = (archivo: string, buf: Buffer): ContextoPlan => ({
@@ -32,7 +39,7 @@ const ctxVacio = (archivo: string, buf: Buffer): ContextoPlan => ({
   sha256: sha256(buf),
 })
 
-describe('primera importación (base vacía)', () => {
+describir('primera importación (base vacía)', () => {
   let plan: PlanImportacion
 
   beforeAll(() => {
@@ -106,7 +113,7 @@ describe('primera importación (base vacía)', () => {
   })
 })
 
-describe('segunda importación (idempotencia)', () => {
+describir('segunda importación (idempotencia)', () => {
   it('re-importar el mismo archivo no produce ningún cambio', () => {
     // Se simula el estado tras aplicar la primera importación.
     const primero = buildImportPlan(crm, 'CRM_COMERCIAL', ctxVacio('CRM.xlsx', bufCrm))
@@ -249,7 +256,7 @@ describe('segunda importación (idempotencia)', () => {
   })
 })
 
-describe('identidad entre archivos', () => {
+describir('identidad entre archivos', () => {
   it('los alias sembrados evitan duplicar a Ronny y compañía', () => {
     // Estado tras importar el CRM: los talentos ya existen con sus alias.
     const conocidos: TalentoConocido[] = ALIAS_SEMBRADOS.map((a, i) => ({
@@ -301,7 +308,7 @@ describe('identidad entre archivos', () => {
   })
 })
 
-describe('métricas del roster', () => {
+describir('métricas del roster', () => {
   let plan: PlanImportacion
 
   beforeAll(() => {
@@ -333,7 +340,7 @@ describe('métricas del roster', () => {
   })
 })
 
-describe('talentos ausentes', () => {
+describir('talentos ausentes', () => {
   it('un talento que el archivo no trae se marca, nunca se borra', () => {
     const conocidos: TalentoConocido[] = [{
       talentId: 'fantasma', codigo: 'KT-999', canonicalName: 'Talento Que No Viene',
@@ -350,14 +357,14 @@ describe('talentos ausentes', () => {
   })
 })
 
-describe('detección del tipo de archivo', () => {
+describir('detección del tipo de archivo', () => {
   it('el usuario puede subir cualquiera de los dos sin decir cuál es', () => {
     expect(detectarTipoArchivo(crm)).toBe('CRM_COMERCIAL')
     expect(detectarTipoArchivo(roster)).toBe('ROSTER')
   })
 })
 
-describe('ningún campo se planea para tirarse después', () => {
+describir('ningún campo se planea para tirarse después', () => {
   it('todo lo que el plan propone lo sabe escribir el commit', async () => {
     // Fue un fallo real: el plan extraía "Notas / ángulo comercial" y los
     // enlaces del roster, el commit los descartaba por no estar en su lista

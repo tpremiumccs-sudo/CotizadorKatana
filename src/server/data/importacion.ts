@@ -29,10 +29,16 @@ import type { PlanImportacion } from '@/server/import/types'
  * Cuelga de `STORAGE_DIR`, que en producción es un volumen. Guardarlos junto
  * al código los perdería en cada despliegue, y entonces la respuesta a "¿de
  * dónde salió este precio?" sería "de un archivo que ya no existe".
+ *
+ * Sin `UPLOADS_DIR`: existía como escape, no estaba documentada ni validada, y
+ * `respaldo.ts` la ignoraba — o sea que podía desviar los .xlsx fuera del
+ * volumen sin que nada avisara. Una sola variable manda sobre dónde vive el
+ * estado.
  */
-const DIR_SUBIDAS =
-  process.env.UPLOADS_DIR ??
-  join(process.env.STORAGE_DIR ?? join(process.cwd(), 'var'), 'importaciones')
+const DIR_SUBIDAS = join(
+  process.env.STORAGE_DIR ?? join(process.cwd(), 'var'),
+  'importaciones',
+)
 
 export { MAX_BYTES, ArchivoInvalidoError, RespaldoFallidoError }
 

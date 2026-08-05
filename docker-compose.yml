@@ -32,14 +32,23 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: 768m
     networks: [katana]
 
   app:
-    image: ${APP_IMAGE:-katana/cotizador}:${APP_VERSION:-latest}
+    # Con `build:` presente, esto es sólo el NOMBRE que se le pone a la imagen
+    # construida aquí; no se descarga de ningún registro. Las dos variables
+    # existen para el día que se publique en GHCR y el servidor deje de
+    # compilar: se ponen en el .env y `docker compose pull` empieza a traerla.
+    image: ${APP_IMAGE:-katana/cotizador}:${APP_VERSION:-local}
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # `allowedOrigins` de las Server Actions se hornea en el build: con el
+        # valor equivocado mueren en cuanto Cloudflare reescriba el Host, y
+        # ninguna variable de entorno lo arregla — hay que reconstruir.
+        APP_PUBLIC_URL: ${APP_PUBLIC_URL}
     container_name: katana-app
     restart: unless-stopped
     depends_on:
@@ -50,7 +59,6 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL}
       PORT: 3000
-      SESSION_SECRET: ${SESSION_SECRET}
       SESSION_SLIDING_HOURS: ${SESSION_SLIDING_HOURS:-12}
       SESSION_ABSOLUTE_HOURS: ${SESSION_ABSOLUTE_HOURS:-168}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
@@ -64,13 +72,16 @@ services:
       - katana_storage:/var/lib/katana
     # Chromium necesita más de los 64 MB por defecto de /dev/shm o se cae al
     # renderizar documentos largos.
-    shm_size: '512mb'
+    shm_size: '256mb'
     security_opt:
       # Un proceso comprometido no puede escalar por un binario setuid.
       - no-new-privileges:true
     deploy:
       resources:
         limits:
+          # Techo total del stack ≈ 3.15 GB sobre un host de 4 GB, dejando
+          # aire al kernel y a dockerd. Ojo: el `shm_size` de arriba cuenta
+          # DENTRO de este límite, no fuera.
           memory: 2g
     networks: [katana]
 
@@ -79,14 +90,20 @@ services:
     container_name: katana-tunnel
     restart: unless-stopped
     depends_on:
+      # `service_healthy` y no `service_started`: si no, el túnel anuncia el
+      # sitio y devuelve 502 mientras corren las migraciones y la siembra.
       app:
-        condition: service_started
+        condition: service_healthy
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     security_opt:
       - no-new-privileges:true
     # El túnel sólo abre conexiones salientes; no necesita nada del sistema.
     read_only: true
     cap_drop: [ALL]
+    deploy:
+      resources:
+        limits:
+          memory: 128m
     networks: [katana]
 
   backup:
@@ -105,10 +122,21 @@ services:
       PGDATABASE: ${POSTGRES_DB}
       BACKUP_CRON: ${BACKUP_CRON:-0 3 * * *}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      # Sin definir, el `set -eu` del entrypoint aborta con "TZ: unbound
+      # variable" y el servicio de respaldos no arranca nunca.
+      TZ: ${TZ:-America/Mexico_City}
     volumes:
       - ./respaldos:/respaldos
     security_opt:
       - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+        # Media CPU: el volcado nocturno comprime, y en 2 vCPU eso compite con
+        # la generación de un PDF si alguien está trabajando de madrugada.
+        reservations:
+          cpus: '0.25'
     networks: [katana]
 
 volumes:

@@ -1,0 +1,5 @@
+Next en modo standalone copia `public/` a la imagen, y el Dockerfile lo copia
+también. Si el directorio no existe, BuildKit aborta con
+`failed to compute cache key: "/app/public": not found` — después de haber
+gastado los 15-25 minutos de compilación. Este archivo existe para que exista
+el directorio.

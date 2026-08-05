@@ -18,3 +18,9 @@ coverage
 .venv
 *.log
 docs
+
+# Datos comerciales reales de la agencia: los .xlsx del CRM, los PDFs emitidos
+# y los respaldos previos. `COPY . .` los metería dentro de la imagen.
+var
+.datos
+tests/fixtures/xlsx

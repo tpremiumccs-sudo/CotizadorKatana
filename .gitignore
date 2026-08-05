@@ -4,6 +4,9 @@ out/
 dist/
 build/
 
+# El seed empaquetado: lo genera esbuild dentro de la imagen, no se versiona.
+/prisma/seed.mjs
+
 # Entorno y secretos — NUNCA versionar
 .env
 .env.local
@@ -25,6 +28,12 @@ tests/**/__salida__/
 /respaldos/
 # Los .xlsx subidos: son datos comerciales reales de la agencia, no código.
 /var/
+
+# Los .xlsx del CRM: el tarifario completo, el roster y las notas comerciales
+# internas. Se dejaron de versionar; siguen en el historial de git, así que hay
+# que asumir que pudieron copiarse mientras el repositorio estuvo público.
+# Quien los tenga los deja aquí y las pruebas de importación vuelven a correr.
+/tests/fixtures/xlsx/
 
 # Sistema
 .DS_Store

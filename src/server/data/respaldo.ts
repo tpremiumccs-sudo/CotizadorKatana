@@ -1,6 +1,6 @@
 import 'server-only'
 import { execFile } from 'node:child_process'
-import { mkdir, rename, stat, unlink } from 'node:fs/promises'
+import { mkdir, readdir, rename, stat, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 
@@ -19,6 +19,19 @@ const ejecutar = promisify(execFile)
  */
 
 const TIEMPO_MAXIMO_MS = 120_000
+
+/**
+ * Cuántos respaldos previos se conservan.
+ *
+ * Cada importación aplicada deja un volcado completo. Sin techo, el volumen
+ * crece un dump por importación para siempre y el día que se llene el disco no
+ * arranca ni Postgres. Diez cubre de sobra el "deshaz lo de esta semana", que es
+ * para lo que sirven; los respaldos de largo plazo son los del servicio nocturno
+ * en `./respaldos/`, con su propia retención.
+ */
+const MAXIMO_PREVIOS = 10
+
+const ES_PREVIO = /^previo-.*\.dump$/
 
 export class RespaldoFallidoError extends Error {
   constructor(motivo: string) {
@@ -100,5 +113,44 @@ export async function respaldarAntesDe(etiqueta: string): Promise<Respaldo> {
   // como si estuviera completo.
   await rename(parcial, destino)
   const { size } = await stat(destino)
+
+  // Rotar DESPUÉS de tener el nuevo respaldo completo y verificado: si se
+  // borrara antes y el volcado fallara, se habría tirado el más reciente a
+  // cambio de nada.
+  await rotar(dir)
+
   return { ruta: destino, bytes: size }
+}
+
+/**
+ * Deja los `MAXIMO_PREVIOS` más recientes y borra el resto.
+ *
+ * Nunca lanza: la rotación es higiene, no la operación. Que no se pueda borrar
+ * un archivo viejo no es motivo para negar una importación que ya tiene su
+ * respaldo hecho y comprobado.
+ */
+async function rotar(dir: string): Promise<void> {
+  try {
+    const nombres = (await readdir(dir)).filter((n) => ES_PREVIO.test(n))
+    if (nombres.length <= MAXIMO_PREVIOS) return
+
+    // Por fecha del archivo y no por el nombre: el sello va al final, después
+    // de una etiqueta de longitud variable, así que ordenar alfabéticamente
+    // agruparía por etiqueta y borraría el equivocado.
+    const conFecha = await Promise.all(
+      nombres.map(async (nombre) => ({
+        nombre,
+        ms: await stat(join(dir, nombre))
+          .then((s) => s.mtimeMs)
+          .catch(() => 0),
+      })),
+    )
+
+    conFecha.sort((a, b) => b.ms - a.ms)
+    for (const { nombre } of conFecha.slice(MAXIMO_PREVIOS)) {
+      await unlink(join(dir, nombre)).catch(() => {})
+    }
+  } catch {
+    // Ídem.
+  }
 }

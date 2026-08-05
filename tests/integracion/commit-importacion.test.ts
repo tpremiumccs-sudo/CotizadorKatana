@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { PrismaClient } from '@prisma/client'
 import { readWorkbook, sha256 } from '@/server/import/workbook'
 import { buildImportPlan } from '@/server/import/plan'
@@ -8,6 +7,9 @@ import { commitImport, calcularCommitKey } from '@/server/import/commit'
 import { normalizeName, type TalentoConocido } from '@/server/import/identity'
 import { FORMATOS } from '@/server/import/catalogo'
 import type { RejillaHoja } from '@/server/import/types'
+import {
+  ARCHIVO_CRM, NOMBRE_CRM, FALTAN_LOS_XLSX, avisarSiFaltan,
+} from '../fixtures/xlsx-reales'
 
 /**
  * Importación completa contra Postgres: del .xlsx real a la base.
@@ -19,7 +21,11 @@ import type { RejillaHoja } from '@/server/import/types'
  */
 
 const prisma = new PrismaClient()
-const DIR = join(import.meta.dirname, '../fixtures/xlsx')
+
+// Los .xlsx no se versionan: son datos comerciales reales. Sin ellos estas
+// pruebas se omiten con un mensaje, no fallan.
+avisarSiFaltan()
+const describir = FALTAN_LOS_XLSX ? describe.skip : describe
 
 let crm: RejillaHoja[]
 let bufCrm: Buffer
@@ -69,14 +75,15 @@ async function importar(decisiones = {}) {
   const plan = buildImportPlan(crm, 'CRM_COMERCIAL', {
     talentosConocidos: await talentosConocidos(),
     tarifasActuales: await tarifasActuales(),
-    archivo: 'KATANA_ENGINE_CRM_COMERCIAL_2026.xlsx',
+    archivo: NOMBRE_CRM,
     sha256: sha256(bufCrm),
   })
   return { plan, resultado: await commitImport(prisma, plan, decisiones, actor) }
 }
 
 beforeAll(async () => {
-  bufCrm = readFileSync(join(DIR, 'KATANA_ENGINE_CRM_COMERCIAL_2026.xlsx'))
+  if (FALTAN_LOS_XLSX) return
+  bufCrm = readFileSync(ARCHIVO_CRM)
   crm = await readWorkbook(bufCrm)
   await prisma.$connect()
 
@@ -96,11 +103,12 @@ beforeAll(async () => {
 }, 120_000)
 
 afterAll(async () => {
+  if (FALTAN_LOS_XLSX) return
   await limpiar()
   await prisma.$disconnect()
 })
 
-describe('primera importación del CRM real', () => {
+describir('primera importación del CRM real', () => {
   it('entra el archivo completo en una sola transacción', async () => {
     const { resultado } = await importar()
 
@@ -209,7 +217,7 @@ describe('primera importación del CRM real', () => {
   })
 })
 
-describe('segunda importación del mismo archivo', () => {
+describir('segunda importación del mismo archivo', () => {
   it('no crea ni modifica nada', async () => {
     const talentosAntes = await prisma.talent.count()
     const tarifasAntes = await prisma.talentRate.count()
@@ -249,7 +257,7 @@ describe('segunda importación del mismo archivo', () => {
   }, 120_000)
 })
 
-describe('una edición manual sobrevive a un Excel viejo', () => {
+describir('una edición manual sobrevive a un Excel viejo', () => {
   it('el precio ajustado en la app no se pisa al re-importar', async () => {
     const ident = await prisma.talentIdentifier.findUnique({
       where: { normalized: normalizeName('Ronny') },

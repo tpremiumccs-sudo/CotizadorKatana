@@ -57,43 +57,9 @@ export function necesitaRehash(hashAlmacenado: string): boolean {
 /**
  * Requisitos mínimos de contraseña.
  *
- * Longitud sobre complejidad: una frase larga resiste más que "P@ssw0rd!". Se
- * bloquean también las que contienen el nombre del sistema, que es lo primero
- * que prueba cualquiera.
+ * La política vive en `src/lib/politica-password.ts`, sin `server-only`, para
+ * que el seed pueda aplicarla también: es la única forma de que el primer
+ * administrador no nazca con una credencial que el propio sistema prohíbe.
+ * Se reexporta aquí para no romper a quien ya la importaba de este módulo.
  */
-export function validarPassword(
-  plano: string,
-  contexto: { email?: string; nombre?: string } = {},
-): { ok: true } | { ok: false; motivo: string } {
-  if (plano.length < 12) {
-    return { ok: false, motivo: 'La contraseña debe tener al menos 12 caracteres.' }
-  }
-  if (plano.length > 200) {
-    return { ok: false, motivo: 'La contraseña es demasiado larga (máximo 200).' }
-  }
-
-  const n = plano.toLowerCase()
-  const prohibidas = ['katana', 'cotizador', 'password', 'contrasena', '123456', 'qwerty']
-  for (const p of prohibidas) {
-    if (n.includes(p)) {
-      return {
-        ok: false,
-        motivo: `La contraseña no puede contener "${p}". Usa una frase que solo tú conozcas.`,
-      }
-    }
-  }
-
-  const local = contexto.email?.split('@')[0]?.toLowerCase()
-  if (local && local.length >= 4 && n.includes(local)) {
-    return { ok: false, motivo: 'La contraseña no puede contener tu correo.' }
-  }
-  if (contexto.nombre) {
-    for (const parte of contexto.nombre.toLowerCase().split(/\s+/)) {
-      if (parte.length >= 4 && n.includes(parte)) {
-        return { ok: false, motivo: 'La contraseña no puede contener tu nombre.' }
-      }
-    }
-  }
-
-  return { ok: true }
-}
+export { validarPassword } from '@/lib/politica-password'

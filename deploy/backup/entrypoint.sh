@@ -4,10 +4,26 @@
 # interpretan minuto y hora; el resto se ignora a propósito).
 set -eu
 
-echo "[respaldo] Servicio iniciado. Programación: ${BACKUP_CRON:-0 3 * * *} (${TZ})"
+echo "[respaldo] Servicio iniciado. Programación: ${BACKUP_CRON:-0 3 * * *} (${TZ:-UTC})"
 
+# Con límite, y saliendo distinto de cero al agotarlo. El `until` sin techo de
+# antes era la peor forma de fallar que tiene este servicio: si PGPASSWORD no
+# coincide con la de la base —y se escribe DOS veces en el .env, suelta y dentro
+# de DATABASE_URL— el contenedor se quedaba aquí PARA SIEMPRE, en estado
+# `running` y sin un solo respaldo. Se descubría el día que hacía falta uno.
+#
+# Al salir con error, `restart: unless-stopped` reintenta, pero el contenedor
+# entra en bucle de reinicio: eso SÍ se ve en `./deploy.sh estado`.
+INTENTOS=60   # 5 minutos
+n=0
 until pg_isready -q; do
-  echo "[respaldo] Esperando a la base de datos…"
+  n=$((n + 1))
+  if [ "$n" -ge "$INTENTOS" ]; then
+    echo "[respaldo] ERROR: la base no respondió tras $((INTENTOS * 5)) segundos." >&2
+    echo "[respaldo] Lo más probable: PGPASSWORD no coincide con POSTGRES_PASSWORD." >&2
+    exit 1
+  fi
+  echo "[respaldo] Esperando a la base de datos… ($n/$INTENTOS)"
   sleep 5
 done
 

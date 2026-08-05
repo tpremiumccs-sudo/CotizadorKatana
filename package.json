@@ -58,6 +58,7 @@
     "@types/react-dom": "19.0.2",
     "@vitejs/plugin-react": "4.3.4",
     "@vitest/coverage-v8": "^4.1.10",
+    "esbuild": "0.28.1",
     "eslint": "9.39.5",
     "eslint-config-next": "15.5.22",
     "fast-check": "3.23.2",

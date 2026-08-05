@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { readWorkbook, buscarHoja, detectarTipoArchivo } from '@/server/import/workbook'
 import { detectHeaderRow, indicePorCanonico } from '@/server/import/header'
 import { parsePrice } from '@/server/import/parse-price'
@@ -10,6 +9,9 @@ import {
   SPEC_ROSTER_BASE, SPEC_ROSTER_PERFIL, SPEC_KIF, SPEC_FIERA,
 } from '@/server/import/spec'
 import type { RejillaHoja } from '@/server/import/types'
+import {
+  ARCHIVO_CRM, ARCHIVO_ROSTER, FALTAN_LOS_XLSX, avisarSiFaltan,
+} from '../fixtures/xlsx-reales'
 
 /**
  * Lectura de los DOS archivos reales del CRM.
@@ -19,19 +21,21 @@ import type { RejillaHoja } from '@/server/import/types'
  * silenciosa deje el tarifario a medias.
  */
 
-const DIR = join(import.meta.dirname, '../fixtures/xlsx')
-const ARCHIVO_CRM = join(DIR, 'KATANA_ENGINE_CRM_COMERCIAL_2026.xlsx')
-const ARCHIVO_ROSTER = join(DIR, 'CRM_Roster_Katana_Actualizado.xlsx')
+// Los .xlsx no se versionan: son datos comerciales reales. Sin ellos estas
+// pruebas se omiten con un mensaje, no fallan.
+avisarSiFaltan()
+const describir = FALTAN_LOS_XLSX ? describe.skip : describe
 
 let crm: RejillaHoja[]
 let roster: RejillaHoja[]
 
 beforeAll(async () => {
+  if (FALTAN_LOS_XLSX) return
   crm = await readWorkbook(readFileSync(ARCHIVO_CRM))
   roster = await readWorkbook(readFileSync(ARCHIVO_ROSTER))
 }, 120_000)
 
-describe('lectura del archivo', () => {
+describir('lectura del archivo', () => {
   it('reconoce cuál de los dos archivos es', () => {
     expect(detectarTipoArchivo(crm)).toBe('CRM_COMERCIAL')
     expect(detectarTipoArchivo(roster)).toBe('ROSTER')
@@ -47,7 +51,7 @@ describe('lectura del archivo', () => {
   })
 })
 
-describe('detección de la fila de encabezados', () => {
+describir('detección de la fila de encabezados', () => {
   // Los índices reales, medidos. Están en filas distintas y por eso se detectan
   // en vez de codificarse.
   const CASOS: Array<[string, typeof SPEC_TARIFARIO, number, 'crm' | 'roster']> = [
@@ -102,7 +106,7 @@ describe('detección de la fila de encabezados', () => {
   })
 })
 
-describe('TARIFARIO: las 399 celdas de precio', () => {
+describir('TARIFARIO: las 399 celdas de precio', () => {
   it('los 19 formatos del catálogo están en la hoja, y las 4 columnas que no son formato quedan fuera', () => {
     const hoja = buscarHoja(crm, 'TARIFARIO KATANA')!
     const d = detectHeaderRow(hoja, SPEC_TARIFARIO)

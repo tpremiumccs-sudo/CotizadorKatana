@@ -27,6 +27,15 @@ const nextConfig: NextConfig = {
     // El lint corre como paso propio en CI; no debe bloquear el build de la imagen.
     ignoreDuringBuilds: true,
   },
+
+  typescript: {
+    // Igual que el lint: CI lo comprueba en su propio paso (`npm run typecheck`).
+    // Dentro de la imagen se salta porque `next build` type-chequea de paso los
+    // tests —casi 700 KB de TypeScript que no acaban en la imagen— y ese pico de
+    // memoria es el que tumba la compilación en un servidor de 4 GB.
+    // Fuera de Docker sigue activo: en local y en CI el type-check no se toca.
+    ignoreBuildErrors: process.env.SALTAR_TYPECHECK === '1',
+  },
 }
 
 export default nextConfig

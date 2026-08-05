@@ -4,7 +4,8 @@ Instalación del Cotizador en un servidor Ubuntu, de principio a fin. Está
 escrita para que la siga alguien que nunca vio este repositorio: si en algún
 paso hay que adivinar algo, es un fallo de esta guía — repórtalo.
 
-**Tiempo aproximado:** 20 minutos, de los cuales 10 son esperas.
+**Tiempo aproximado:** 40 minutos, de los cuales 25 son la compilación de la
+imagen — se hace sola, no hay que mirarla.
 
 ---
 
@@ -12,10 +13,23 @@ paso hay que adivinar algo, es un fallo de esta guía — repórtalo.
 
 | Cosa | Para qué | Cómo conseguirla |
 |---|---|---|
-| Un servidor Ubuntu 22.04 o 24.04 | Donde vive el cotizador | 2 vCPU y 4 GB de RAM bastan |
+| Un servidor Ubuntu 22.04 o 24.04 | Donde vive el cotizador | 2 vCPU y 4 GB de RAM, **4 GB de swap** y 15 GB de disco libre |
 | Acceso `sudo` por SSH | Instalar Docker | — |
 | Una cuenta de Cloudflare | Publicarlo sin abrir puertos | Gratuita en cloudflare.com |
 | El dominio en Cloudflare | Que `cotizador.katanatalent.com` apunte al túnel | Ya lo está si el sitio usa Cloudflare |
+
+La **swap no es opcional**: la imagen se compila en el propio servidor y el pico
+de `next build` ronda los 3 GB. Con 4 GB de RAM y sin swap, la compilación muere
+con un `Killed` a secas y sin explicación. Si el servidor no la tiene:
+
+```bash
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+free -h        # debe aparecer la línea Swap con 4,0Gi
+```
 
 No hace falta abrir los puertos 80 ni 443 del servidor, ni gestionar
 certificados: el túnel abre una conexión **saliente** hacia Cloudflare y por ahí
@@ -67,10 +81,10 @@ cd CotizadorKatana
 cp .env.example .env
 ```
 
-Genera dos secretos distintos:
+Genera la contraseña de la base **en el servidor**, no en tu máquina ni en un
+chat:
 
 ```bash
-openssl rand -base64 48   # para SESSION_SECRET
 openssl rand -base64 32   # para POSTGRES_PASSWORD
 ```
 
@@ -78,19 +92,31 @@ Abre `.env` y cambia **todos** los valores que dicen `CAMBIAR`:
 
 | Variable | Qué poner |
 |---|---|
-| `POSTGRES_PASSWORD` | El segundo secreto que generaste |
-| `DATABASE_URL` | La misma contraseña, dentro de la URL |
-| `SESSION_SECRET` | El primer secreto |
+| `POSTGRES_PASSWORD` | El secreto que acabas de generar |
+| `DATABASE_URL` | **La misma contraseña**, dentro de la URL |
 | `APP_PUBLIC_URL` | `https://cotizador.katanatalent.com` |
 | `SEED_ADMIN_EMAIL` | El correo del primer administrador |
 | `SEED_ADMIN_NOMBRE` | Su nombre completo |
 | `SEED_ADMIN_PASSWORD` | Una contraseña inicial de 12+ caracteres |
 | `CLOUDFLARE_TUNNEL_TOKEN` | El token del paso 3 |
 
+> **La contraseña de Postgres se escribe dos veces** —suelta en
+> `POSTGRES_PASSWORD` y embebida dentro de `DATABASE_URL`— y tienen que ser
+> idénticas. Si divergen, la aplicación funciona con normalidad y el servicio de
+> respaldos no consigue conectarse; se descubriría el día que hiciera falta un
+> respaldo. `deploy.sh` compara las dos y se niega a instalar si no coinciden.
+
 > **Sobre la contraseña inicial.** Sólo sirve para el primer acceso: el sistema
-> obliga a cambiarla al entrar. Y no puede contener "katana" ni "cotizador" —
-> el validador las rechaza —, así que la que elijas aquí no se podrá volver a
-> usar como contraseña definitiva. Es a propósito.
+> obliga a cambiarla al entrar. Pasa por la **misma** política que se exige
+> después, así que no puede tener menos de 12 caracteres ni contener "katana",
+> "cotizador", "password", "contrasena", "123456", "qwerty", ni tu nombre o tu
+> correo. Si no cumple, el contenedor **no arranca** y dice exactamente por qué.
+
+> **No hay ningún secreto de sesión que poner.** Las sesiones son opacas: el
+> identificador es aleatorio y la fila vive en la base, así que no hay nada que
+> firmar. Para revocar accesos de verdad se cierran las sesiones desde
+> **Usuarios** —eso borra las filas y surte efecto al instante—, no se rota un
+> secreto.
 
 `deploy.sh` se niega a arrancar si queda algún `CAMBIAR` en el archivo.
 
@@ -102,9 +128,16 @@ Abre `.env` y cambia **todos** los valores que dicen `CAMBIAR`:
 ./deploy.sh instalar
 ```
 
-Esto construye las imágenes, levanta los cuatro servicios, espera a que la
-aplicación responda y crea el primer usuario administrador. La primera vez tarda
-varios minutos porque descarga Chromium.
+Esto compila la imagen, levanta los cuatro servicios y espera a que la
+aplicación responda. **La primera vez tarda entre 15 y 25 minutos**: compila
+Next, descarga Chromium y sus librerías, y trae el cliente de PostgreSQL 16.
+Déjalo correr; no está colgado.
+
+Al arrancar, el contenedor de la app aplica las migraciones y siembra el
+catálogo y el primer administrador. Si cualquiera de esas dos cosas falla, el
+contenedor **no levanta** y la instalación se detiene con el error a la vista.
+Es deliberado: una app en pie contra una base a medio migrar, o sin un solo
+usuario con el que entrar, es peor que una que no arranca y lo dice.
 
 Cuando termine, imprime la dirección. Entra, escribe el correo y la contraseña
 inicial, y el sistema te pedirá elegir una nueva.
@@ -119,32 +152,39 @@ inicial, y el sistema te pedirá elegir una nueva.
 | Síntoma | Causa habitual |
 |---|---|
 | `El archivo .env todavía tiene valores sin cambiar` | Quedó un `CAMBIAR`; el propio mensaje dice en qué líneas |
+| `La contraseña de Postgres no coincide` | `POSTGRES_PASSWORD` y la que va dentro de `DATABASE_URL` son distintas |
+| La compilación muere con `Killed` y nada más | Falta swap. Vuelve al paso 1 y créala |
+| `Quedan N GB libres y la construcción necesita cerca de 8` | Libera disco: `docker system prune -af` |
+| `SEED_ADMIN_PASSWORD no cumple la política` | La contraseña inicial lleva una palabra prohibida o es corta; el mensaje dice cuál |
 | La app no responde y los registros dicen `Configuración de entorno inválida` | Falta una variable o tiene un valor imposible; el mensaje dice cuál |
 | El túnel sigue *Inactive* | El token está mal copiado, o el Public Hostname no apunta a `app:3000` |
 | `almacenamiento: false` en `/api/health` | El volumen no se montó; revisa `docker compose ps` |
+| El contenedor `backup` reinicia en bucle | `PGPASSWORD` no coincide con la de la base. Es la misma causa que la fila 2 |
 
 ---
 
 ## 6. Comprobar que quedó bien
 
 ```bash
-# 1. Los cuatro servicios arriba y sanos
 ./deploy.sh estado
-
-# 2. NINGÚN puerto publicado — todo entra por el túnel
-docker compose ps --format '{{.Service}} {{.Ports}}'
 ```
 
-La segunda orden no debe mostrar ningún `0.0.0.0:...->`. Si lo muestra, alguien
-añadió un `ports:` al `docker-compose.yml` y el servidor quedó expuesto a
-internet.
+Los cuatro servicios deben aparecer arriba, y debajo la línea de puertos
+publicados debe decir **`ninguno`** en verde. Si en su lugar sale una lista en
+rojo, alguien añadió un `ports:` al `docker-compose.yml` y el servidor quedó
+expuesto a internet.
 
-Y desde el navegador, entrando con tu cuenta, visita `/api/health`. Debe decir:
+Y desde el navegador visita `/api/health`. Debe decir:
 
 ```json
 {"ok":true,"db":true,"restricciones":true,"chromium":true,
  "documento":true,"almacenamiento":true,"pgDump":true}
 ```
+
+Esa dirección es pública —el chequeo de salud de Docker no puede autenticarse—
+pero sólo publica banderas sí/no. Los mensajes de error y las versiones exactas
+sólo aparecen si la visitas **con tu sesión iniciada**; es lo que conviene mirar
+cuando algo dice `false`.
 
 Qué significa cada uno:
 
@@ -158,8 +198,10 @@ Qué significa cada uno:
 - **almacenamiento** — el volumen donde van los `.xlsx` importados se puede
   escribir.
 - **pgDump** — están las herramientas con las que la app se respalda a sí misma
-  antes de aplicar una importación. Si dice `false`, la app funciona pero las
-  importaciones se bloquearán.
+  antes de aplicar una importación, **y son de la misma versión mayor que el
+  servidor**. Si dice `false`, la app funciona pero las importaciones se
+  bloquearán: `pg_dump` se niega a volcar de un servidor más nuevo que él. Con
+  sesión iniciada, `pgDumpVersiones` muestra las dos.
 
 ---
 
@@ -174,12 +216,21 @@ las tienen en filas distintas), atiende las filas que no se pudieron colocar, y
 confirma los nombres que no coinciden. Cuando estés conforme, **Aplicar al
 tarifario**. Antes de escribir nada, el sistema se respalda solo en
 `respaldos-previos/` dentro del volumen: si ese respaldo falla, la importación
-no se aplica.
+no se aplica. Se conservan los **diez** más recientes; los anteriores se borran
+solos para que el volumen no crezca sin techo.
 
 Después sube el `CRM_Roster_Katana_Actualizado.xlsx` para las métricas de
 audiencia.
 
 Volver a subir el mismo archivo es seguro: dirá "Este archivo no cambia nada".
+
+> Los dos `.xlsx` **no están en el repositorio** y no deben volver a estarlo: son
+> el tarifario completo, el roster y las notas comerciales internas. Estuvieron
+> versionados mientras el repositorio era público, así que siguen en el
+> historial de git y hay que dar por hecho que pudieron copiarse. Quien
+> desarrolle y quiera correr las pruebas de importación los deja en
+> `tests/fixtures/xlsx/` —está en `.gitignore`—; sin ellos, esas pruebas se
+> omiten con un mensaje en vez de fallar.
 
 ---
 
@@ -226,22 +277,32 @@ caso, para la app primero.
 
 ## 9. Actualizar
 
-La imagen se construye en GitHub Actions y sólo se publica si pasaron todas las
-pruebas. El servidor únicamente la descarga:
-
 ```bash
 cd CotizadorKatana
 git pull
 ./deploy.sh actualizar
 ```
 
+La imagen se **recompila en el servidor**, igual que en la instalación: 10-20
+minutos, algo menos que la primera vez porque Docker reaprovecha las capas que
+no cambiaron.
+
 Las migraciones de base de datos se aplican solas al arrancar el contenedor. Si
 fallan, el contenedor **no** levanta: es preferible a arrancar contra una base
 en un estado que nadie sabe interpretar.
 
-> No compiles en el servidor. Con 2 vCPU y 4 GB, construir Next con la base y
-> Chromium en pie se queda sin memoria. Si necesitas construir localmente:
-> `BUILD_LOCAL=1 ./deploy.sh actualizar`.
+> **Si cambias `APP_PUBLIC_URL`, hay que recompilar.** El dominio se hornea
+> dentro de la imagen (`allowedOrigins` de las Server Actions): editarlo en el
+> `.env` y reiniciar no basta, y el síntoma es que los formularios dejan de
+> guardar sin decir por qué. `./deploy.sh actualizar` lo resuelve porque
+> reconstruye.
+
+> **Cuando esto lleve un tiempo en pie, vale la pena publicar la imagen en
+> GHCR.** El flujo de CI ya la compila en cada rama; sólo falta que la publique
+> y que el servidor haga `pull` en vez de compilar. Se activa poniendo
+> `APP_IMAGE` y `APP_VERSION` en el `.env` —están comentadas en `.env.example`—
+> y ahorra 20 minutos de CPU por despliegue en una máquina de 2 vCPU. No hace
+> falta para arrancar.
 
 ---
 

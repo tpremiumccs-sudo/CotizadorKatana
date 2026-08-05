@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { hash } from '@node-rs/argon2'
 import { FORMATOS } from '../src/server/import/catalogo'
+import { validarPassword } from '../src/lib/politica-password'
 
 /**
  * Semilla de la base.
@@ -129,6 +130,19 @@ async function sembrarAdmin(): Promise<string | null> {
     // a poner la del .env desharía cualquier cambio que el usuario hiciera.
     console.log(`[seed] El administrador ${email} ya existe; no se toca.`)
     return existente.id
+  }
+
+  // La misma política que se le exigirá al cambiarla. Sin esto, la única cuenta
+  // ADMIN del sistema recién instalado nacía con una credencial que el propio
+  // validador rechaza — y la persona lo descubría a base de intentos en la
+  // pantalla de cambio obligatorio.
+  const politica = validarPassword(password, { email, nombre })
+  if (!politica.ok) {
+    throw new Error(
+      `SEED_ADMIN_PASSWORD no cumple la política: ${politica.motivo}\n` +
+        'Corrígela en el .env antes de instalar: es la contraseña con la que se ' +
+        'entra por primera vez.',
+    )
   }
 
   const usuario = await prisma.usuario.create({

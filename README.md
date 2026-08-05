@@ -51,8 +51,10 @@ $EDITOR .env          # cambia TODOS los valores marcados CAMBIAR
 ```
 
 Requiere Docker con el plugin `compose` v2 y un túnel de Cloudflare. No hay que
-abrir puertos ni gestionar certificados. La guía completa cubre el túnel, la
-comprobación de salud y la carga inicial de datos.
+abrir puertos ni gestionar certificados. La imagen se compila en el propio
+servidor —15-25 minutos la primera vez—, así que hacen falta **4 GB de swap** y
+unos 15 GB de disco libre. La guía completa cubre el túnel, la comprobación de
+salud y la carga inicial de datos.
 
 ## Operación
 
@@ -84,6 +86,12 @@ npm run dev
 Las pruebas de integración y E2E comparten un solo Postgres y corren en serie a
 propósito: en paralelo se pisan y fallan de forma intermitente, que es la peor
 clase de fallo.
+
+Los dos `.xlsx` del CRM **no se versionan**: son el tarifario completo, el roster
+y las notas comerciales de la agencia. Las pruebas que dependen de ellos se
+**omiten con un mensaje** cuando no están, así que la suite corre igual sin
+tenerlos. Quien los tenga los deja en `tests/fixtures/xlsx/` —ignorado por git— y
+vuelven a correr solas.
 
 ## Cómo está partido
 

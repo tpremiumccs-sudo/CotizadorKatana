@@ -1,8 +1,13 @@
 name: CI
 
-# El servidor de la agencia tiene 2 vCPU y 4 GB: compilar Next ahí con la base
-# y Chromium en pie es OOM garantizado. Se construye aquí y el servidor sólo
-# hace `pull`.
+# Hoy el servidor de la agencia compila su propia imagen (repositorio privado,
+# sin registro de por medio). Aquí se compila también, en TODAS las ramas y sin
+# publicar: es la única forma de enterarse de que el Dockerfile está roto sin
+# gastar 20 minutos de un servidor de 2 vCPU para descubrirlo.
+#
+# El job `imagen`, que sí publica en GHCR, sólo corre en `main`. El día que se
+# ponga `APP_IMAGE` en el .env del servidor, éste dejará de compilar y hará
+# `pull`.
 
 on:
   push:
@@ -41,7 +46,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://katana:katana_ci@localhost:5432/katana?schema=public
       APP_PUBLIC_URL: http://127.0.0.1:3210
-      SESSION_SECRET: una-clave-de-integracion-continua-de-32-o-mas
       SEED_ADMIN_EMAIL: ci@katanatalent.com
       SEED_ADMIN_NOMBRE: CI
       SEED_ADMIN_PASSWORD: una frase larga para integracion
@@ -85,10 +89,14 @@ jobs:
         run: npm run test:integracion
 
       # El oráculo de fidelidad compara contra el PDF original con pdfplumber.
+      # `tools/calibrar.py` necesita fontTools y brotli, no sólo pdfplumber:
+      # las fuentes son .woff2 y fontTools no las abre sin brotli. La lista
+      # correcta ya estaba en tools/requirements.txt; el workflow no la usaba,
+      # y por eso las tres ejecuciones de CI fallaron en el mismo punto.
       - name: Herramientas de Python
         run: |
           python3 -m venv .venv
-          .venv/bin/pip install --quiet pdfplumber
+          .venv/bin/pip install --quiet -r tools/requirements.txt
 
       - name: Fidelidad del PDF
         run: npm run test:pdf
@@ -100,12 +108,70 @@ jobs:
         run: npm run test:e2e
 
       - name: Informe de Playwright
+        # `if-no-files-found: ignore` porque el fallo puede ocurrir antes de que
+        # Playwright llegue a correr, y entonces el directorio no existe.
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
+          if-no-files-found: ignore
           retention-days: 7
+
+  # ───────────────────────────────────────────────────────────────────────
+  #  Construir la imagen EN TODAS LAS RAMAS, sin publicarla.
+  #
+  #  Es la única forma de saber si el Dockerfile compila sin tener un servidor
+  #  delante: apt, el repositorio de PostgreSQL, Chromium y las cinco etapas.
+  #  Sin esto, el primer intento real de construcción ocurre en el servidor de
+  #  la agencia, tras 20 minutos, y falla ahí.
+  #
+  #  No depende de que las pruebas pasen: si el Dockerfile está roto, quiero
+  #  saberlo aunque un test esté en rojo por otra cosa.
+  # ───────────────────────────────────────────────────────────────────────
+  imagen-prueba:
+    name: La imagen construye
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construir (sin publicar)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: katana/cotizador:prueba
+          build-args: |
+            APP_PUBLIC_URL=https://ejemplo.invalid
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Comprobar que en la imagen está lo que el arranque necesita. Cada uno
+      # de estos ficheros faltaba en algún momento y el fallo sólo aparecía al
+      # arrancar el contenedor en producción.
+      - name: La imagen tiene lo que el arranque necesita
+        run: |
+          set -e
+          probar() {
+            if docker run --rm --entrypoint sh katana/cotizador:prueba -c "$1" >/dev/null 2>&1
+            then echo "  ✓ $2"
+            else echo "  ✗ $2"; exit 1
+            fi
+          }
+          probar "test -f /opt/prisma-cli/node_modules/prisma/build/index.js" "el CLI de Prisma"
+          probar "node /opt/prisma-cli/node_modules/prisma/build/index.js --version" "el CLI arranca (carga @prisma/config, effect y empathic)"
+          probar "ls /opt/prisma-cli/node_modules/@prisma/engines/schema-engine-*" "el schema-engine, que usa migrate deploy"
+          probar "test -f /app/prisma/seed.mjs" "el seed empaquetado"
+          probar "test -f /app/prisma/schema.prisma" "el esquema y las migraciones"
+          probar "command -v fc-cache" "fc-cache (paquete fontconfig)"
+          probar "pg_dump --version | grep -q ' 16\\.'" "pg_dump 16, la misma mayor que el servidor"
+          probar "test -d /app/assets/fonts && test -d /app/assets/brand" "las fuentes y el logo del documento"
+          probar "test -d /ms-playwright" "Chromium"
+          probar "node -e \"process.exit(require('/app/.next/required-server-files.json').config.experimental.serverActions.allowedOrigins.includes('ejemplo.invalid')?0:1)\"" "allowedOrigins con el dominio real, no localhost"
 
   imagen:
     name: Imagen

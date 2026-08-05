@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { existsSync } from 'node:fs'
 import { prisma } from '@/lib/db'
+import { leerSesion } from '@/server/auth/session'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -8,15 +9,35 @@ export const runtime = 'nodejs'
 /**
  * Sonda de salud para Docker y Cloudflare.
  *
- * Comprueba las CUATRO cosas sin las que la app no sirve de nada:
+ * Comprueba las cosas sin las que la app no sirve de nada:
  *   · la base responde,
  *   · las restricciones de integridad siguen puestas (una migración a medias
  *     dejaría pasar precios "Pendiente" con importe),
  *   · existe el binario de Chromium, o no habrá PDF,
  *   · están las fuentes y el logo del documento, que se leen del disco: si la
  *     imagen se construyó sin ellas, la app arranca y todo parece bien hasta
- *     que alguien pide un PDF en una junta.
+ *     que alguien pide un PDF en una junta,
+ *   · se puede escribir en el volumen,
+ *   · `pg_dump` está y es de la MISMA versión mayor que el servidor.
+ *
+ * ES PÚBLICA, y tiene que serlo: el HEALTHCHECK de Docker no puede autenticarse.
+ * Pero sólo publica banderas sí/no. Los mensajes de error, los nombres de las
+ * restricciones que falten y las versiones exactas de Postgres se devuelven
+ * únicamente a quien tiene sesión: son el mapa de qué está roto y con qué
+ * versión, y eso no se le cuenta a internet.
  */
+
+/** Claves que sólo salen con sesión iniciada. */
+const SOLO_CON_SESION = new Set([
+  'dbError',
+  'restriccionesFaltantes',
+  'chromiumError',
+  'documentoError',
+  'almacenamientoError',
+  'pgDumpError',
+  'pgDumpVersiones',
+])
+
 export async function GET() {
   const detalle: Record<string, unknown> = {}
   let ok = true
@@ -119,19 +140,65 @@ export async function GET() {
   // ── Herramientas de respaldo ───────────────────────────────────────────
   // La app se respalda a sí misma antes de aplicar una importación. Si falta
   // pg_dump, esa importación se bloquea — mejor saberlo aquí.
+  //
+  // Y no basta con que EXISTA: pg_dump se niega a volcar de un servidor con
+  // versión mayor a la suya. Con el cliente 15 de Debian contra postgres:16, el
+  // binario responde a `--version` tan campante y esta sonda decía `pgDump:
+  // true` mientras la importación del CRM quedaba bloqueada por completo. Se
+  // comparan las dos mayores.
   try {
     const { execFile } = await import('node:child_process')
     const { promisify } = await import('node:util')
-    await promisify(execFile)('pg_dump', ['--version'], { timeout: 10_000 })
+    const { stdout } = await promisify(execFile)('pg_dump', ['--version'], {
+      timeout: 10_000,
+    })
+
+    const mayorCliente = Number(/(\d+)/.exec(stdout)?.[1])
+    if (!Number.isFinite(mayorCliente)) {
+      throw new Error(`no se pudo leer la versión de pg_dump: ${stdout.trim()}`)
+    }
+
+    let mayorServidor = mayorCliente
+    if (detalle.db === true) {
+      const filas = await prisma.$queryRaw<
+        { server_version_num: string }[]
+      >`SELECT current_setting('server_version_num') AS server_version_num`
+      mayorServidor = Math.floor(Number(filas[0]?.server_version_num) / 10_000)
+    }
+
+    detalle.pgDumpVersiones = { cliente: mayorCliente, servidor: mayorServidor }
+
+    // Un cliente MÁS NUEVO que el servidor sí funciona; al revés no.
+    if (mayorCliente < mayorServidor) {
+      throw new Error(
+        `pg_dump es de PostgreSQL ${mayorCliente} y el servidor es ${mayorServidor}: ` +
+          'se negará a volcar y la importación del CRM quedará bloqueada.',
+      )
+    }
+
     detalle.pgDump = true
-  } catch {
+  } catch (e) {
     // No tumba la salud general: la app funciona, sólo que no se podrá
     // importar hasta que esté. Se reporta para que se vea.
     detalle.pgDump = false
+    detalle.pgDumpError = e instanceof Error ? e.message : String(e)
   }
 
+  // Sin sesión, sólo las banderas. Que la sonda esté rota no es motivo para
+  // negar el diagnóstico a quien sí puede verlo, así que un fallo al leer la
+  // sesión se trata como "no hay sesión" y no como error.
+  const conSesion = await leerSesion()
+    .then((s) => s !== null)
+    .catch(() => false)
+
+  const cuerpo = conSesion
+    ? detalle
+    : Object.fromEntries(
+        Object.entries(detalle).filter(([k]) => !SOLO_CON_SESION.has(k)),
+      )
+
   return NextResponse.json(
-    { ok, ...detalle, ts: new Date().toISOString() },
+    { ok, ...cuerpo, ts: new Date().toISOString() },
     {
       status: ok ? 200 : 503,
       headers: { 'Cache-Control': 'no-store' },
