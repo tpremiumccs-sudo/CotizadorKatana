@@ -1,0 +1,150 @@
+name: CI
+
+# El servidor de la agencia tiene 2 vCPU y 4 GB: compilar Next ahí con la base
+# y Chromium en pie es OOM garantizado. Se construye aquí y el servidor sólo
+# hace `pull`.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  pruebas:
+    name: Pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: katana
+          POSTGRES_PASSWORD: katana_ci
+          POSTGRES_DB: katana
+          POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U katana -d katana"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://katana:katana_ci@localhost:5432/katana?schema=public
+      APP_PUBLIC_URL: http://127.0.0.1:3210
+      SESSION_SECRET: una-clave-de-integracion-continua-de-32-o-mas
+      SEED_ADMIN_EMAIL: ci@katanatalent.com
+      SEED_ADMIN_NOMBRE: CI
+      SEED_ADMIN_PASSWORD: una frase larga para integracion
+      E2E_PORT: '3210'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # Las fuentes del documento vienen del sistema, no de npm: sin ellas el
+      # PDF no reproduce las métricas de Helvetica.
+      - name: Fuentes del documento
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-urw-base35
+          fc-cache -f
+
+      - name: Chromium de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm run db:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Pruebas unitarias
+        run: npm run test:unit
+
+      - name: Pruebas de integración
+        run: npm run test:integracion
+
+      # El oráculo de fidelidad compara contra el PDF original con pdfplumber.
+      - name: Herramientas de Python
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet pdfplumber
+
+      - name: Fidelidad del PDF
+        run: npm run test:pdf
+
+      - name: Construir
+        run: npm run build:standalone
+
+      - name: Pruebas de extremo a extremo
+        run: npm run test:e2e
+
+      - name: Informe de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  imagen:
+    name: Imagen
+    needs: pruebas
+    # Sólo se publica lo que ya pasó todas las pruebas, y sólo desde la rama
+    # principal: una imagen `latest` que nadie revisó es la forma más rápida de
+    # tumbar producción.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+            type=ref,event=tag
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

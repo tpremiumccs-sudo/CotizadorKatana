@@ -22,8 +22,16 @@ import type { PlanImportacion } from '@/server/import/types'
  * romperse o, peor, inventar datos en silencio.
  */
 
-/** Dónde se guardan los .xlsx subidos: son la evidencia de qué entró. */
-const DIR_SUBIDAS = process.env.UPLOADS_DIR ?? join(process.cwd(), 'var/importaciones')
+/**
+ * Dónde se guardan los .xlsx subidos: son la evidencia de qué entró.
+ *
+ * Cuelga de `STORAGE_DIR`, que en producción es un volumen. Guardarlos junto
+ * al código los perdería en cada despliegue, y entonces la respuesta a "¿de
+ * dónde salió este precio?" sería "de un archivo que ya no existe".
+ */
+const DIR_SUBIDAS =
+  process.env.UPLOADS_DIR ??
+  join(process.env.STORAGE_DIR ?? join(process.cwd(), 'var'), 'importaciones')
 
 export { MAX_BYTES, ArchivoInvalidoError }
 

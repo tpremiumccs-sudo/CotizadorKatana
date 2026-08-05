@@ -117,6 +117,35 @@ test.describe('accesibilidad', () => {
   })
 })
 
+test.describe('cabeceras de seguridad', () => {
+  test('la CSP va con nonce y no bloquea la vista previa', async ({ page }) => {
+    const r = await page.goto('/cotizaciones')
+    const csp = r!.headers()['content-security-policy'] ?? ''
+    expect(csp, 'hay CSP').toContain("default-src 'self'")
+    expect(csp, 'con nonce por petición').toMatch(/nonce-[A-Za-z0-9+/=]+/)
+    expect(csp, 'nada sale hacia fuera').toContain("connect-src 'self'")
+    // `'none'` dejaría el documento en blanco: la vista previa es un iframe de
+    // mismo origen. Lo que se impide es que OTRO sitio enmarque la app.
+    expect(csp).toContain("frame-ancestors 'self'")
+    expect(r!.headers()['x-frame-options']).toBe('SAMEORIGIN')
+    expect(r!.headers()['x-content-type-options']).toBe('nosniff')
+    expect(r!.headers()['referrer-policy']).toBe('strict-origin-when-cross-origin')
+  })
+
+  test('el nonce cambia en cada petición', async ({ page }) => {
+    const leer = async () => {
+      const r = await page.goto('/cotizaciones')
+      return /nonce-([A-Za-z0-9+/=]+)/.exec(
+        r!.headers()['content-security-policy'] ?? '',
+      )?.[1]
+    }
+    const a = await leer()
+    const b = await leer()
+    expect(a).toBeTruthy()
+    expect(a).not.toBe(b)
+  })
+})
+
 test.describe('navegación con teclado', () => {
   test('se puede entrar sin tocar el ratón', async ({ page }) => {
     await page.context().clearCookies()

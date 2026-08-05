@@ -97,6 +97,25 @@ export async function GET() {
     detalle.documentoError = e instanceof Error ? e.message : String(e)
   }
 
+  // ── Almacenamiento ─────────────────────────────────────────────────────
+  // Los .xlsx importados y los PDFs emitidos van a un volumen. Si no está
+  // montado o no se puede escribir, la app arranca y todo parece bien hasta
+  // que alguien sube un archivo.
+  try {
+    const { mkdir, writeFile, unlink } = await import('node:fs/promises')
+    const { join } = await import('node:path')
+    const dir = process.env.STORAGE_DIR ?? join(process.cwd(), 'var')
+    const prueba = join(dir, '.escritura')
+    await mkdir(dir, { recursive: true })
+    await writeFile(prueba, 'ok')
+    await unlink(prueba)
+    detalle.almacenamiento = true
+  } catch (e) {
+    ok = false
+    detalle.almacenamiento = false
+    detalle.almacenamientoError = e instanceof Error ? e.message : String(e)
+  }
+
   return NextResponse.json(
     { ok, ...detalle, ts: new Date().toISOString() },
     {

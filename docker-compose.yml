@@ -21,6 +21,8 @@ services:
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
     volumes:
       - katana_db:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
@@ -63,6 +65,9 @@ services:
     # Chromium necesita más de los 64 MB por defecto de /dev/shm o se cae al
     # renderizar documentos largos.
     shm_size: '512mb'
+    security_opt:
+      # Un proceso comprometido no puede escalar por un binario setuid.
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -77,6 +82,11 @@ services:
       app:
         condition: service_started
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    security_opt:
+      - no-new-privileges:true
+    # El túnel sólo abre conexiones salientes; no necesita nada del sistema.
+    read_only: true
+    cap_drop: [ALL]
     networks: [katana]
 
   backup:
@@ -97,6 +107,8 @@ services:
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
     volumes:
       - ./respaldos:/respaldos
+    security_opt:
+      - no-new-privileges:true
     networks: [katana]
 
 volumes:
