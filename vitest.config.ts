@@ -5,12 +5,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // `server-only` existe para que Next falle si un módulo de servidor se
+      // cuela en el cliente. En Vitest no hay tal frontera, así que se anula.
+      'server-only': fileURLToPath(new URL('./tests/vacio.ts', import.meta.url)),
     },
   },
   test: {
     environment: 'node',
     globals: true,
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/setup.ts'],
     // El importador lee .xlsx reales y el render de PDF arranca Chromium.
     testTimeout: 60_000,
     hookTimeout: 60_000,
