@@ -18,6 +18,12 @@ export default defineConfig({
     // El importador lee .xlsx reales y el render de PDF arranca Chromium.
     testTimeout: 60_000,
     hookTimeout: 60_000,
+    // Un solo Postgres para todas las pruebas de integración, y varias de
+    // ellas vacían tablas entre casos (el importador borra todos los talentos
+    // para partir de cero). En paralelo se pisan y fallan de forma
+    // intermitente, que es la peor clase de fallo: el que se achaca al azar.
+    // La suite completa tarda ~10 s en serie; no compensa perseguir fantasmas.
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],

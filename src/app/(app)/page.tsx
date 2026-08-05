@@ -43,9 +43,8 @@ export default async function Inicio() {
 
         <div className="mt-10 rounded-katana border border-katana-200 bg-katana-100 p-5">
           <p className="text-sm text-tinta-suave">
-            El sistema está en construcción: la importación del Excel, el
-            tarifario y la descarga del PDF se habilitarán en las siguientes
-            fases.
+            El tarifario se llena importando el CRM; cada cotización copia de
+            ahí y se ajusta para su marca sin tocar los precios de lista.
             {!can(actor, 'cotizacion.crear').permitido &&
               ' Tu cuenta es de solo lectura: puedes consultar y descargar, no editar.'}
           </p>

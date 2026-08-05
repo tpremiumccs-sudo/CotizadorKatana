@@ -165,6 +165,33 @@ export function buildImportPlan(
     tarifasPorClave.set(`${t.talentId}|${t.deliverableCode}`, t)
   }
 
+  const perfilPorId = new Map<string, Record<string, unknown>>()
+  for (const t of ctx.talentosConocidos) {
+    if (t.perfil) perfilPorId.set(t.talentId, t.perfil)
+  }
+
+  /**
+   * Registra un campo del perfil SÓLO si de verdad cambia.
+   *
+   * Sin esta comparación, volver a importar el mismo archivo declaraba 23
+   * actualizaciones que no actualizaban nada: la pantalla de revisión gritaba
+   * y la bitácora se llenaba de apuntes vacíos, con lo que un cambio de verdad
+   * quedaba enterrado entre el ruido.
+   */
+  function asignar(e: EntradaPlanTalento, campo: string, valor: unknown): void {
+    if (e.talentIdExistente) {
+      const perfil = perfilPorId.get(e.talentIdExistente)
+      if (perfil && campo in perfil && mismoValor(perfil[campo], valor)) return
+      e.cambiosTalento[campo] = {
+        antes: perfil ? (perfil[campo] ?? null) : undefined,
+        despues: valor,
+      }
+      return
+    }
+    // Talento nuevo: no hay con qué comparar, todo es "se va a poner".
+    e.cambiosTalento[campo] = { antes: undefined, despues: valor }
+  }
+
   /**
    * Devuelve (o crea) la entrada del talento, resolviendo su identidad.
    *
@@ -524,10 +551,13 @@ export function buildImportPlan(
   const talentos = [...new Set(porNormalizado.values())]
   for (const e of talentos) {
     if (e.talentIdExistente) {
+      // Las métricas NO cuentan como cambio del talento: son observaciones
+      // fechadas que se acumulan, no un dato que se corrija. Volver a leer que
+      // alguien tiene 919K seguidores no actualiza nada — y contarlo como
+      // actualización hacía que re-importar el mismo archivo dijera que iba a
+      // cambiar tres talentos que no cambiaban. Van aparte, en `metricasNuevas`.
       const cambia =
-        Object.keys(e.cambiosTalento).length > 0 ||
-        e.cambiosTarifas.length > 0 ||
-        e.metricas.length > 0
+        Object.keys(e.cambiosTalento).length > 0 || e.cambiosTarifas.length > 0
       e.accion = cambia ? 'ACTUALIZAR' : 'SIN_CAMBIOS'
     } else {
       e.accion = 'CREAR'
@@ -575,8 +605,21 @@ function hojaFaltante(nombre: string, severidad: Severidad = 'AVISO'): Incidenci
   }
 }
 
-function asignar(e: EntradaPlanTalento, campo: string, valor: unknown): void {
-  e.cambiosTalento[campo] = { antes: undefined, despues: valor }
+/** Dos valores del perfil son "el mismo" a efectos de importación. */
+function mismoValor(antes: unknown, despues: unknown): boolean {
+  if (antes === despues) return true
+  if (antes == null || despues == null) return false
+  // Las verticales llegan como lista y el orden del Excel no es significativo.
+  if (Array.isArray(antes) && Array.isArray(despues)) {
+    if (antes.length !== despues.length) return false
+    const a = [...antes].map(String).sort()
+    const b = [...despues].map(String).sort()
+    return a.every((x, i) => x === b[i])
+  }
+  if (antes instanceof Date || despues instanceof Date) {
+    return new Date(antes as string).getTime() === new Date(despues as string).getTime()
+  }
+  return String(antes) === String(despues)
 }
 
 function agregarMetricas(

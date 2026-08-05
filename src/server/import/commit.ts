@@ -208,10 +208,21 @@ export async function commitImport(
 
 // ─────────────────────────── auxiliares ───────────────────────────
 
-const CAMPOS_TALENTO = new Set([
+/**
+ * Los campos del talento que el importador puede escribir.
+ *
+ * Es una lista blanca a propósito: el plan puede proponer un campo que el
+ * modelo no tenga y aquí se descarta en vez de reventar. Pero descartar en
+ * silencio tiene su propio precio — `commercialNotes` y los enlaces del roster
+ * se planeaban y se tiraban en cada importación, así que el CRM traía las notas
+ * comerciales de la agencia y el sistema nunca las guardaba. Si se añade un
+ * campo al plan, tiene que entrar también aquí Y al modelo.
+ */
+export const CAMPOS_TALENTO = new Set([
   'canonicalName', 'category', 'relationshipType', 'country', 'city',
   'primaryPlatformNote', 'rateNotes', 'rateSourceLabel', 'bio',
   'driveFolderId', 'verticals', 'roster',
+  'commercialNotes', 'username', 'linkInstagram', 'linkTiktok', 'linkYoutube',
 ])
 
 function extraerCampos(e: EntradaPlanTalento): Record<string, unknown> {

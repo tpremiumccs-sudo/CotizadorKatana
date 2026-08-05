@@ -330,6 +330,18 @@ model Talent {
   /// y las de Tejón/Divino/Gambetiti/Mike. Se preserva ÍNTEGRA, jamás se parsea.
   rateNotes           String?          @db.Text
 
+  /// Columna "Notas / ángulo comercial" del CRM. Es donde la agencia escribe
+  /// el contexto que decide una venta ("Tarifario en revisión de Ramiro",
+  /// "Menor de edad: requiere autorización de tutor"). Se guarda íntegra.
+  commercialNotes String? @db.Text
+
+  /// Enlaces y usuario tal como vienen del roster. No se normalizan: la URL
+  /// con sus parámetros de seguimiento es lo que alguien pegó y lo que abre.
+  username      String?
+  linkInstagram String?
+  linkTiktok    String?
+  linkYoutube   String?
+
   bio           String? @db.Text
   achievements  String? @db.Text
   campaigns     String? @db.Text

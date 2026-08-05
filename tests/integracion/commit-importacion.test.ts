@@ -32,6 +32,10 @@ async function limpiar() {
   await prisma.talentMetric.deleteMany({})
   await prisma.talentRate.deleteMany({})
   await prisma.talentIdentifier.deleteMany({})
+  // Las cotizaciones apuntan a los talentos: si quedó alguna de otra prueba o
+  // de una verificación manual, borrar talentos viola la clave foránea.
+  await prisma.quote.deleteMany({})
+  await prisma.client.deleteMany({})
   await prisma.talent.deleteMany({})
   await prisma.bitacora.deleteMany({})
   await prisma.importBatch.deleteMany({})

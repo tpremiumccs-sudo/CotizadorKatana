@@ -23,6 +23,8 @@ tests/**/__salida__/
 
 # Respaldos
 /respaldos/
+# Los .xlsx subidos: son datos comerciales reales de la agencia, no código.
+/var/
 
 # Sistema
 .DS_Store

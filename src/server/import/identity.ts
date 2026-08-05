@@ -182,6 +182,13 @@ export interface TalentoConocido {
   displayName: string
   /** Todas las formas normalizadas que ya apuntan a este talento. */
   identificadores: string[]
+  /**
+   * Valores actuales del perfil, para poder decir si un campo cambia de verdad.
+   *
+   * Sin esto, re-importar el mismo archivo declara una actualización por cada
+   * campo que el archivo trae, aunque el valor sea idéntico al guardado.
+   */
+  perfil?: Record<string, unknown>
 }
 
 /**

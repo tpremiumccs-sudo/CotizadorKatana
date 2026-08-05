@@ -117,6 +117,13 @@ describe('segunda importación (idempotencia)', () => {
       canonicalName: t.crudo,
       displayName: t.displayName,
       identificadores: [normalizeName(t.crudo), normalizeName(t.displayName)],
+      // El perfil tal como quedó tras aplicar la primera importación. Sin
+      // esto la segunda pasada no tiene con qué comparar y declara una
+      // actualización por CADA campo que el archivo trae, aunque el valor sea
+      // idéntico — que es exactamente el fallo que esta prueba vigila.
+      perfil: Object.fromEntries(
+        Object.entries(t.cambiosTalento).map(([campo, v]) => [campo, v.despues]),
+      ),
     }))
 
     const tarifas = primero.talentos.flatMap((t, i) =>
@@ -145,6 +152,62 @@ describe('segunda importación (idempotencia)', () => {
     // Ningún talento propone cambios de tarifa la segunda vez.
     const conCambios = segundo.talentos.filter((t) => t.cambiosTarifas.length > 0)
     expect(conCambios.map((t) => t.crudo)).toEqual([])
+
+    // Ni cambios de perfil. Un campo que ya vale lo que el archivo dice NO es
+    // un cambio: declararlo llenaría la revisión y la bitácora de ruido, y un
+    // cambio de verdad quedaría enterrado entre 23 que no lo son.
+    const conPerfil = segundo.talentos.filter(
+      (t) => Object.keys(t.cambiosTalento).length > 0,
+    )
+    expect(
+      conPerfil.map((t) => `${t.crudo}: ${Object.keys(t.cambiosTalento).join(', ')}`),
+    ).toEqual([])
+
+    // Y por tanto nada que actualizar.
+    expect(segundo.resumen.aActualizar).toBe(0)
+    expect(segundo.talentos.every((t) => t.accion === 'SIN_CAMBIOS')).toBe(true)
+  })
+
+  it('un campo que SÍ cambia en el archivo se detecta, con su valor anterior', () => {
+    // La otra mitad de la moneda: comparar no puede volverse "no detectar nada".
+    const primero = buildImportPlan(crm, 'CRM_COMERCIAL', ctxVacio('CRM.xlsx', bufCrm))
+    const ronny = primero.talentos.find((t) => t.codigo === 'KT-004')!
+
+    const conocidos: TalentoConocido[] = primero.talentos.map((t, i) => ({
+      talentId: `id-${i}`,
+      codigo: t.codigo,
+      canonicalName: t.crudo,
+      displayName: t.displayName,
+      identificadores: [normalizeName(t.crudo), normalizeName(t.displayName)],
+      perfil: Object.fromEntries(
+        Object.entries(t.cambiosTalento).map(([campo, v]) => [
+          campo,
+          // Al de Ronny se le cambia la categoría a mano, como si alguien la
+          // hubiera editado en la app después de importar.
+          t.codigo === ronny.codigo && campo === 'category'
+            ? 'Otra cosa distinta'
+            : v.despues,
+        ]),
+      ),
+    }))
+
+    const segundo = buildImportPlan(crm, 'CRM_COMERCIAL', {
+      talentosConocidos: conocidos,
+      tarifasActuales: [],
+      archivo: 'CRM.xlsx',
+      sha256: sha256(bufCrm),
+    })
+
+    const cambiado = segundo.talentos.find((t) => t.codigo === ronny.codigo)!
+    expect(Object.keys(cambiado.cambiosTalento)).toContain('category')
+    expect(cambiado.cambiosTalento.category!.antes).toBe('Otra cosa distinta')
+    expect(cambiado.cambiosTalento.category!.despues).toBe(
+      ronny.cambiosTalento.category!.despues,
+    )
+    expect(cambiado.accion).toBe('ACTUALIZAR')
+
+    // Y sólo ese: los demás campos del mismo talento no se declaran.
+    expect(Object.keys(cambiado.cambiosTalento)).toEqual(['category'])
   })
 
   it('una tarifa editada a mano en la app se marca como conflicto y se conserva', () => {
@@ -291,5 +354,51 @@ describe('detección del tipo de archivo', () => {
   it('el usuario puede subir cualquiera de los dos sin decir cuál es', () => {
     expect(detectarTipoArchivo(crm)).toBe('CRM_COMERCIAL')
     expect(detectarTipoArchivo(roster)).toBe('ROSTER')
+  })
+})
+
+describe('ningún campo se planea para tirarse después', () => {
+  it('todo lo que el plan propone lo sabe escribir el commit', async () => {
+    // Fue un fallo real: el plan extraía "Notas / ángulo comercial" y los
+    // enlaces del roster, el commit los descartaba por no estar en su lista
+    // blanca, y el resultado era que el CRM traía esa información y el sistema
+    // no la guardaba NUNCA — mientras cada re-importación volvía a proponerla.
+    const { CAMPOS_TALENTO } = await import('@/server/import/commit')
+
+    // Los dos archivos: cada uno aporta campos distintos.
+    const planes = [
+      buildImportPlan(crm, 'CRM_COMERCIAL', ctxVacio('CRM.xlsx', bufCrm)),
+      buildImportPlan(roster, 'ROSTER', ctxVacio('Roster.xlsx', bufCrm)),
+    ]
+
+    const planeados = new Set<string>()
+    for (const t of planes.flatMap((p) => p.talentos)) {
+      for (const campo of Object.keys(t.cambiosTalento)) planeados.add(campo)
+    }
+
+    // `rateStatusRaw` y `code` los trata el commit aparte, no por la lista.
+    const tratadosAparte = new Set(['rateStatusRaw', 'code'])
+    const huerfanos = [...planeados].filter(
+      (c) => !CAMPOS_TALENTO.has(c) && !tratadosAparte.has(c),
+    )
+
+    expect(huerfanos).toEqual([])
+  })
+
+  it('y todo lo que el commit acepta existe en el modelo', async () => {
+    const { CAMPOS_TALENTO } = await import('@/server/import/commit')
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+    try {
+      const columnas = await prisma.$queryRaw<{ column_name: string }[]>`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'Talent'
+      `
+      const existentes = new Set(columnas.map((c) => c.column_name))
+      const inexistentes = [...CAMPOS_TALENTO].filter((c) => !existentes.has(c))
+      expect(inexistentes).toEqual([])
+    } finally {
+      await prisma.$disconnect()
+    }
   })
 })
