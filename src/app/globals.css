@@ -1,0 +1,106 @@
+@import 'tailwindcss';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Sistema de diseño Katana Talent
+
+   La paleta sale MEDIDA del PDF original (Tabulador HONOR), no inventada.
+   Ojo: estos tokens son para el CHROME DE LA APP. El DOCUMENTO tiene su propio
+   CSS aislado en src/components/doc/document.css con valores hex literales,
+   porque vive dentro de un <iframe> y nunca debe heredar nada de aquí.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Marca (medida del PDF) ── */
+  --color-katana-50: #faf6fe;
+  --color-katana-100: #fbf9fe; /* tinte lila de fondo — zebra y cajas */
+  --color-katana-200: #e4dbf0; /* borde lila */
+  --color-katana-300: #d3c2e8;
+  --color-katana-400: #a86fd6;
+  --color-katana-500: #7b2fbe; /* morado marca · barra superior · viñetas */
+  --color-katana-600: #6a26a6;
+  --color-katana-700: #551d85;
+  --color-katana-800: #3d0070; /* morado oscuro · títulos · nombres */
+  --color-katana-900: #2c0050;
+  --color-katana-950: #1c1326; /* texto de cuerpo */
+
+  /* Azul de los precios en el tabulador. Está así en el PDF original. */
+  --color-precio: #1e3a8a;
+
+  /* Grises de la identidad */
+  --color-tinta: #1c1326;
+  --color-tinta-suave: #5e5566;
+  --color-etiqueta: #9a92a6;
+
+  /* Semánticos */
+  --color-exito: #15803d;
+  --color-alerta: #b45309;
+  --color-error: #b91c1c;
+  --color-info: #1e3a8a;
+
+  /* Tipografía de la app (el documento usa KatanaSans, no esto) */
+  --font-sans:
+    'Inter var', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Radios y sombras */
+  --radius-katana: 0.625rem;
+  --shadow-katana:
+    0 1px 2px 0 rgb(28 19 38 / 0.04), 0 1px 3px 0 rgb(28 19 38 / 0.06);
+  --shadow-katana-lg:
+    0 4px 6px -1px rgb(28 19 38 / 0.07), 0 10px 24px -4px rgb(28 19 38 / 0.10);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: light;
+
+  /* Altura del teclado en pantalla. La actualiza visualViewport en iPad/iOS
+     para que la barra de acciones no quede tapada al escribir un precio. */
+  --kb-inset: 0px;
+
+  /* Alto real del área visible: en iOS 100vh miente cuando hay barra de URL. */
+  --vh-real: 100dvh;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background-color: #ffffff;
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  /* Evita el zoom automático de iOS al enfocar un input (<16px lo dispara). */
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Ninguna pantalla debe desbordar horizontalmente: es criterio de aceptación. */
+  overflow-x: hidden;
+}
+
+/* Foco visible y consistente en todo: se navega mucho con teclado en escritorio. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-katana-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Números tabulares en cualquier importe: las columnas de precios deben alinear. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

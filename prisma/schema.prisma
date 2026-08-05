@@ -1,0 +1,831 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  Cotizador Katana Talent — modelo de datos
+//
+//  REGLAS DE DINERO (inviolables)
+//   · Todo importe es CENTAVOS ENTEROS de MXN, columna `Int`. Prohibido Float/Decimal.
+//   · `BigInt` NO se usa en columnas: JSON.stringify(1n) lanza y rompe RSC/Server Actions.
+//     computeQuote trabaja en bigint internamente y valida el techo de $20,000,000.00
+//     (2_000_000_000 centavos < Int32) al cruzar la frontera.
+//   · Porcentajes en basis points Int (1600 = 16.00%).
+//
+//  Los CHECK y triggers viven en migrations/0001_init/migration.sql: Prisma solo
+//  ejecuta ese archivo, así que no pueden estar en un .sql hermano.
+// ═══════════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext]
+}
+
+// ───────────────────────────── ENUMS ─────────────────────────────
+
+enum Rol {
+  ADMIN
+  COMERCIAL
+  LECTURA
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  SUSPENDIDO
+  DESACTIVADO
+}
+
+/// El precio es un TIPO COMPUESTO: importe + estado. Los 3 tokens de texto son
+/// los únicos que existen en las 19 columnas de precio del TARIFARIO
+/// (N/A×93, Pendiente×87, Caso por caso×37 sobre 399 celdas).
+enum PriceStatus {
+  QUOTED
+  PENDING
+  NOT_APPLICABLE
+  CASE_BY_CASE
+}
+
+enum RosterKind {
+  KATANA
+  KIF
+  FIERA
+}
+
+enum TalentRateStatus {
+  ACTIVO
+  INCOMPLETO
+  CAPTURADO
+  PENDIENTE
+  REFERENCIA_HISTORICA
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  FACEBOOK
+  TWITCH
+  KICK
+  X
+  OTRA
+}
+
+enum MetricParseStatus {
+  EXACT
+  INFERRED
+  FAILED
+}
+
+enum DeliverableCategory {
+  SOCIAL_CONTENT
+  PLACEMENT
+  EVENT
+  STREAMING
+  YOUTUBE
+  LONGFORM
+  RIGHTS
+}
+
+enum UnitKind {
+  PIEZA
+  HORA
+  MES
+  EVENTO
+  PERIODO_7D
+}
+
+enum QuoteStatus {
+  DRAFT
+  REQUIERE_APROBACION
+  SENT
+  IN_NEGOTIATION
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum TaxMode {
+  ADDED
+  EXEMPT
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum DocKind {
+  TABULADOR
+  COTIZACION
+}
+
+enum RateChangeSource {
+  IMPORT
+  MANUAL
+  SEED
+}
+
+enum IdentifierSource {
+  PERFIL_COMERCIAL
+  TARIFARIO
+  TALENTOS
+  ROSTER
+  KIF
+  FIERA
+  MANUAL
+  SEED
+  IMPORT_MATCH
+}
+
+enum ImportKind {
+  CRM_COMERCIAL
+  ROSTER
+}
+
+enum ImportStatus {
+  UPLOADED
+  PARSED
+  PREVIEWED
+  COMMITTED
+  ABORTED
+  FAILED
+}
+
+enum CategoriaBitacora {
+  AUTENTICACION
+  USUARIOS
+  CATALOGO
+  TARIFARIO
+  COTIZACION
+  DOCUMENTO
+  IMPORTACION
+  AJUSTES
+  SISTEMA
+}
+
+// ──────────────────── USUARIOS · SESIONES · BITÁCORA ────────────────────
+
+model Usuario {
+  id            String        @id @default(cuid())
+  email         String        @unique @db.Citext
+  /// Al dar de baja liberando el correo, el email se reescribe a
+  /// "baja+{id}@katana.local" y el original queda aquí.
+  emailOriginal String?
+  nombre        String
+  rol           Rol           @default(LECTURA)
+  estado        EstadoUsuario @default(ACTIVO)
+
+  /// Puede aprobar cotizaciones sin ser ADMIN (Ramiro Ortiz en el CRM real).
+  esAprobador Boolean @default(false)
+
+  passwordHash        String?
+  passwordAlgo        String    @default("argon2id")
+  passwordCambiadoEn  DateTime?
+  debeCambiarPassword Boolean   @default(false)
+  bloqueadoHasta      DateTime?
+  ultimoAccesoEn      DateTime?
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  sesiones            Sesion[]
+  eventos             Bitacora[]           @relation("ActorBitacora")
+  cotizacionesCreadas Quote[]              @relation("QuoteCreadaPor")
+  cotizacionesAgente  Quote[]              @relation("QuoteAgente")
+  snapshots           QuoteSnapshot[]
+  lotesImport         ImportBatch[]
+  revisionesTarifa    TalentRateRevision[]
+
+  @@index([estado, rol])
+}
+
+model Sesion {
+  id        String  @id @default(cuid()) // NO es el token
+  tokenHash Bytes   @unique // sha256(token)
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  creadaEn          DateTime  @default(now())
+  expiraEn          DateTime // deslizante
+  expiraAbsolutoEn  DateTime // tope duro
+  ultimaActividadEn DateTime  @default(now())
+  /// Step-up: las operaciones peligrosas exigen < 10 min desde esta marca.
+  reautenticadoEn   DateTime?
+  recordar          Boolean   @default(false)
+  ip                String?
+  userAgent         String?
+  revocadaEn        DateTime?
+  motivoRevocacion  String?
+
+  @@index([usuarioId, revocadaEn])
+  @@index([expiraAbsolutoEn])
+}
+
+model Invitacion {
+  id            String    @id @default(cuid())
+  email         String
+  nombre        String
+  rol           Rol
+  tokenHash     Bytes     @unique
+  invitadoPorId String
+  creadaEn      DateTime  @default(now())
+  expiraEn      DateTime
+  aceptadaEn    DateTime?
+  revocadaEn    DateTime?
+
+  @@index([email, aceptadaEn, revocadaEn])
+}
+
+model TokenRestablecimiento {
+  id        String    @id @default(cuid())
+  usuarioId String
+  tokenHash Bytes     @unique
+  creadoEn  DateTime  @default(now())
+  expiraEn  DateTime
+  usadoEn   DateTime?
+
+  @@index([usuarioId, usadoEn])
+}
+
+/// Tabla barata y purgable. Los intentos fallidos NO van a Bitacora: un ataque
+/// de credential stuffing haría crecer sin límite una tabla append-only.
+model IntentoAcceso {
+  id       String   @id @default(cuid())
+  email    String
+  ip       String?
+  exito    Boolean
+  motivo   String?
+  creadoEn DateTime @default(now())
+
+  @@index([email, creadoEn])
+  @@index([ip, creadoEn])
+}
+
+/// Append-only. Trigger de DELETE + REVOKE al rol de la app.
+/// Espeja el modelo mental de la hoja HISTORIAL TALENTOS del Excel:
+/// Fecha | Talento | Campo | Valor anterior | Valor nuevo | Usuario | Fuente.
+model Bitacora {
+  id         String   @id @default(cuid())
+  ocurridoEn DateTime @default(now())
+
+  actorId     String?
+  actor       Usuario? @relation("ActorBitacora", fields: [actorId], references: [id], onDelete: Restrict)
+  /// Snapshots: el histórico no se reescribe si el usuario cambia de nombre.
+  actorEmail  String?
+  actorNombre String?
+  actorRol    Rol?
+
+  categoria       CategoriaBitacora
+  accion          String // "tarifario.precio_base_cambiado"
+  entidadTipo     String?
+  entidadId       String?
+  entidadEtiqueta String? // "KAT-HON-2026-001", "Ronny · TikTok + réplica Reel"
+  resumen         String // frase en español lista para pintar
+  cambios         Json? // { campo: { antes, despues } }
+  metadatos       Json?
+  exito           Boolean           @default(true)
+  ip              String?
+  userAgent       String?
+  sesionId        String?
+
+  /// Coalescencia: (actor, entidad, campo, ventana de 5 min) actualiza
+  /// `cambios.despues` en vez de insertar. Las transiciones de estado nunca
+  /// se coalescen.
+  ventana String? @unique
+
+  @@index([ocurridoEn(sort: Desc)])
+  @@index([entidadTipo, entidadId, ocurridoEn(sort: Desc)])
+  @@index([actorId, ocurridoEn(sort: Desc)])
+}
+
+// ──────────────────────── TALENTOS · IDENTIDAD ────────────────────────
+
+model Talent {
+  id            String     @id @default(cuid())
+  /// SOLO se lee de la hoja PERFIL COMERCIAL — CAPTURA. NUNCA se acuña.
+  /// Los códigos reales no son contiguos (faltan KT-018 y KT-021..KT-026).
+  code          String?    @unique
+  canonicalName String
+  /// Lo que se imprime por defecto.
+  displayName   String
+  slug          String     @unique
+  roster        RosterKind @default(KATANA)
+
+  category         String?
+  verticals        String[] @default([])
+  relationshipType String? // "KATANA — Casa" | "KATANA — Aliado (definir)" | …
+  country          String?
+  city             String?
+
+  /// Columna 12 del TARIFARIO: es TEXTO ("Twitch principal | Kick disponible"),
+  /// no un formato cotizable.
+  primaryPlatformNote String?
+  rateStatus          TalentRateStatus @default(INCOMPLETO)
+  rateStatusRaw       String?
+  rateSourceLabel     String?
+  /// La nota de Padigol (704 caracteres con un tarifario de paquetes en prosa)
+  /// y las de Tejón/Divino/Gambetiti/Mike. Se preserva ÍNTEGRA, jamás se parsea.
+  rateNotes           String?          @db.Text
+
+  bio           String? @db.Text
+  achievements  String? @db.Text
+  campaigns     String? @db.Text
+  photoUrl      String?
+  driveFolderId String?
+
+  /// Talento menor de edad: ningún dato personal entra al sistema, pero la
+  /// ficha debe mostrar el aviso legal y bloquear la emisión sin revisión.
+  esMenorDeEdad Boolean @default(false)
+
+  isActive            Boolean @default(true)
+  /// El último import commiteado no lo trajo. NUNCA se borra por ausencia.
+  missingInLastImport Boolean @default(false)
+
+  creadoEn             DateTime @default(now())
+  actualizadoEn        DateTime @updatedAt
+  actualizadoPorId     String?
+  actualizadoPorNombre String?
+
+  identifiers   TalentIdentifier[]
+  metrics       TalentMetric[]
+  rates         TalentRate[]
+  rateRevisions TalentRateRevision[]
+  quoteTalents  QuoteTalent[]
+
+  @@index([roster, isActive])
+  @@index([displayName])
+}
+
+/// ⭐ ÚNICO índice de identidad del sistema. Absorbe canónico, display y alias.
+/// Dos talentos no pueden reclamar el mismo nombre normalizado, así que la
+/// resolución es determinista y las fusiones erróneas salen como colisión real.
+model TalentIdentifier {
+  id          String           @id @default(cuid())
+  talentId    String
+  raw         String // crudo: "Tony Gastelum ", "Padigol)", "Ronny (Ronaldo López)"
+  normalized  String           @unique
+  isCanonical Boolean          @default(false)
+  source      IdentifierSource
+  confidence  Float?
+  creadoEn    DateTime         @default(now())
+  talent      Talent           @relation(fields: [talentId], references: [id], onDelete: Cascade)
+
+  @@index([talentId])
+}
+
+/// Append-only con deduplicación. El roster se actualiza cada 14 días; sin el
+/// unique, un archivo sin cambios insertaría decenas de filas idénticas.
+model TalentMetric {
+  id            String            @id @default(cuid())
+  talentId      String
+  platform      Platform
+  followers     Int?
+  rawValue      String // "99.1.K", "7.1 M", "48.9K aprox. — validar"
+  parseStatus   MetricParseStatus
+  needsReview   Boolean           @default(false)
+  notes         String[]          @default([])
+  /// "Última actualización" del roster. Está vacía en todas las filas medidas,
+  /// así que el fallback es la fecha del archivo y, si no, importedAt por día.
+  capturedAt    DateTime
+  importedAt    DateTime          @default(now())
+  sourceLabel   String?
+  importBatchId String?
+  talent        Talent            @relation(fields: [talentId], references: [id], onDelete: Cascade)
+
+  @@unique([talentId, platform, capturedAt, rawValue])
+  @@index([talentId, platform, capturedAt(sort: Desc)])
+  @@index([needsReview])
+}
+
+// ─────────── CATÁLOGO: 19 FORMATOS (cols 1-11 y 13-20 del TARIFARIO) ───────────
+
+model DeliverableType {
+  id          String  @id @default(cuid())
+  code        String  @unique // TIKTOK, REEL_IG, TIKTOK_REEL_MIRROR, …
+  name        String // etiqueta es-MX en la app
+  pdfLabel    String // "TIKTOK + REEL"
+  pdfSublabel String? // "(ESPEJO)" ← segunda línea centrada del encabezado
+  excelHeader String  @unique // encabezado EXACTO del .xlsx
+
+  category       DeliverableCategory
+  unit           UnitKind            @default(PIEZA)
+  unitLabel      String              @default("pieza")
+  /// false para Exclusividad mensual y Fee pelea: no se venden "3 piezas".
+  allowsQuantity Boolean             @default(true)
+  sortOrder      Int
+  isActive       Boolean             @default(true)
+
+  rates         TalentRate[]
+  rateRevisions TalentRateRevision[]
+  quotePrices   QuotePrice[]
+  quoteColumns  QuoteColumn[]
+  quoteLines    QuoteLine[]
+
+  @@index([category, sortOrder])
+}
+
+// ─────────────────── TARIFAS BASE (estado + historia) ───────────────────
+
+model TalentRate {
+  id                String      @id @default(cuid())
+  talentId          String
+  deliverableTypeId String
+  amountCents       Int?
+  priceStatus       PriceStatus @default(PENDING)
+  note              String?     @db.Text
+  sourceLabel       String?
+
+  lastChangeSource  RateChangeSource @default(IMPORT)
+  lastImportBatchId String?
+  /// Dispara la detección de CONFLICTO al re-importar un Excel viejo.
+  manuallyEditedAt  DateTime?
+
+  /// Bloqueo optimista.
+  revision         Int      @default(0)
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
+  actualizadoPorId String?
+
+  talent          Talent               @relation(fields: [talentId], references: [id], onDelete: Cascade)
+  deliverableType DeliverableType      @relation(fields: [deliverableTypeId], references: [id])
+  revisions       TalentRateRevision[]
+
+  @@unique([talentId, deliverableTypeId])
+  @@index([deliverableTypeId, priceStatus])
+}
+
+model TalentRateRevision {
+  id                String       @id @default(cuid())
+  talentRateId      String
+  talentId          String
+  deliverableTypeId String
+  beforeAmountCents Int?
+  beforePriceStatus PriceStatus?
+  afterAmountCents  Int?
+  afterPriceStatus  PriceStatus
+
+  source        RateChangeSource
+  importBatchId String?
+  actorId       String?
+  reason        String?
+  creadoEn      DateTime         @default(now())
+
+  talentRate      TalentRate      @relation(fields: [talentRateId], references: [id], onDelete: Cascade)
+  talent          Talent          @relation(fields: [talentId], references: [id], onDelete: Cascade)
+  deliverableType DeliverableType @relation(fields: [deliverableTypeId], references: [id])
+  actor           Usuario?        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  importBatch     ImportBatch?    @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  @@index([talentId, creadoEn(sort: Desc)])
+  @@index([importBatchId])
+}
+
+// ──────────────────────── CLIENTES · CONTACTOS ────────────────────────
+
+model Client {
+  id                 String  @id @default(cuid())
+  displayName        String // "HONOR" ← lo que se imprime
+  legalName          String?
+  normalizedKey      String  @unique
+  /// Los 3 caracteres del folio. En el import NO se deriva: se parsea de
+  /// KAT-([A-Z0-9]{3})-(\d{4})-(\d{3}). Reales: VPV HON NFX UFC PLR VDS RON AZT.
+  folioCode          String  @unique @db.Char(3)
+  vertical           String?
+  taxId              String?
+  /// KAT-RON-2026-001 tiene como "cliente" a Ronaldo BXM, que es un talento.
+  isTalentManagement Boolean @default(false)
+  isActive           Boolean @default(true)
+  notes              String? @db.Text
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  contacts ClientContact[]
+  quotes   Quote[]
+
+  @@index([displayName])
+}
+
+model ClientContact {
+  id        String  @id @default(cuid())
+  clientId  String
+  name      String // "Fer Nicolini"
+  role      String?
+  email     String?
+  phone     String?
+  isPrimary Boolean @default(false)
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  quotes    Quote[]
+
+  @@index([clientId])
+}
+
+// ───────────────────────────── COTIZACIÓN ─────────────────────────────
+
+model Quote {
+  id        String  @id @default(cuid())
+  /// NULL mientras es DRAFT: un borrador muerto no quema consecutivo.
+  folio     String? @unique
+  folioYear Int?
+  folioSeq  Int?
+  draftRef  String  @unique // "BORRADOR-7Q4K"
+  /// Cotización histórica importada de PROPUESTAS KATANA ENGINE: conserva su
+  /// folio aunque su estatus real sea "En desarrollo".
+  isLegacy  Boolean @default(false)
+
+  clientId    String
+  contactId   String?
+  /// La columna "Agente / proveedor" del CRM trae "PARK8", una agencia externa
+  /// que no es usuario de la app.
+  agentUserId String?
+  agentLabel  String?
+  createdById String
+
+  projectName   String?
+  quoteType     String?
+  scopeText     String?     @db.Text
+  status        QuoteStatus @default(DRAFT)
+  aprobadaPorId String?
+  aprobadaEn    DateTime?
+
+  currency   String  @default("MXN") // etiqueta de display; el sistema es mono-moneda
+  taxMode    TaxMode @default(ADDED)
+  taxRateBps Int     @default(1600)
+
+  packageDiscountType  DiscountType?
+  packageDiscountValue Int? // bps si PERCENT · centavos si FIXED
+  validityLabel        String?       @default("15 días naturales")
+  paymentTerms         String?
+
+  includeTabulador  Boolean @default(true)
+  includeCotizacion Boolean @default(false)
+  layoutVersion     String  @default("honor-v1")
+
+  // Caché de totales. La verdad la da computeQuote; esto es para listados.
+  subtotalCents        Int       @default(0)
+  lineDiscountCents    Int       @default(0)
+  packageDiscountCents Int       @default(0)
+  taxableBaseCents     Int       @default(0)
+  taxCents             Int       @default(0)
+  totalCents           Int       @default(0)
+  hasNonQuotedLines    Boolean   @default(false)
+  computedAt           DateTime?
+
+  /// Bloqueo optimista: toda mutación va por updateMany({where:{id,revision}}).
+  revision             Int       @default(0)
+  notes                String?   @db.Text
+  creadoEn             DateTime  @default(now())
+  actualizadoEn        DateTime  @updatedAt
+  actualizadoPorNombre String?
+  emittedAt            DateTime?
+  currentSnapshotId    String?   @unique
+
+  client          Client         @relation(fields: [clientId], references: [id])
+  contact         ClientContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  agent           Usuario?       @relation("QuoteAgente", fields: [agentUserId], references: [id])
+  createdBy       Usuario        @relation("QuoteCreadaPor", fields: [createdById], references: [id])
+  currentSnapshot QuoteSnapshot? @relation("SnapshotActual", fields: [currentSnapshotId], references: [id])
+
+  talents        QuoteTalent[]
+  columns        QuoteColumn[]
+  prices         QuotePrice[]
+  lines          QuoteLine[]
+  considerations QuoteConsideration[]
+  terms          QuoteTerm[]
+  snapshots      QuoteSnapshot[]      @relation("SnapshotsDeQuote")
+
+  @@index([clientId, status])
+  @@index([status, actualizadoEn(sort: Desc)])
+}
+
+model QuoteTalent {
+  id                  String  @id @default(cuid())
+  quoteId             String
+  talentId            String
+  /// Prellenado con Talent.displayName. Permite imprimir "Ronny" para KT-004
+  /// y acortar "Kike Padilla / Rookie Leagues" (no cabe en 150pt de columna).
+  displayNameOverride String?
+  sortOrder           Int     @default(0)
+
+  grossCents                    Int @default(0)
+  lineDiscountCents             Int @default(0)
+  allocatedPackageDiscountCents Int @default(0)
+  netCents                      Int @default(0)
+
+  quote  Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  talent Talent       @relation(fields: [talentId], references: [id])
+  prices QuotePrice[]
+  lines  QuoteLine[]
+
+  @@unique([quoteId, talentId])
+  @@index([quoteId, sortOrder])
+}
+
+/// Columnas del tabulador con su etiqueta impresa: el PDF renombra
+/// "TikTok + réplica Reel" → "TIKTOK + REEL" / "(ESPEJO)".
+model QuoteColumn {
+  id                String  @id @default(cuid())
+  quoteId           String
+  deliverableTypeId String
+  headerLabel       String
+  headerSublabel    String?
+  sortOrder         Int     @default(0)
+
+  quote           Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  deliverableType DeliverableType @relation(fields: [deliverableTypeId], references: [id])
+
+  @@unique([quoteId, deliverableTypeId])
+  @@index([quoteId, sortOrder])
+}
+
+/// ⭐ EL CORAZÓN DEL PRODUCTO. Precio efectivo = override ?? base.
+/// Evidencia: el PDF de HONOR imprime Mariel/Reel $120,000 con el tarifario en
+/// "Pendiente"; Ronny/espejo $150,000 vs $195,000; Tony/espejo $80,000 vs $90,000.
+model QuotePrice {
+  id                String @id @default(cuid())
+  quoteId           String
+  quoteTalentId     String
+  deliverableTypeId String
+
+  baseAmountCents Int?
+  basePriceStatus PriceStatus
+  baseCapturedAt  DateTime    @default(now())
+
+  overrideAmountCents Int?
+  overridePriceStatus PriceStatus?
+  overrideReason      String?
+  overriddenById      String?
+  overriddenAt        DateTime?
+
+  showInTabulador Boolean @default(true)
+  sortOrder       Int     @default(0)
+
+  quote           Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteTalent     QuoteTalent     @relation(fields: [quoteTalentId], references: [id], onDelete: Cascade)
+  deliverableType DeliverableType @relation(fields: [deliverableTypeId], references: [id])
+  lines           QuoteLine[]
+
+  @@unique([quoteId, quoteTalentId, deliverableTypeId])
+  @@index([quoteId, sortOrder])
+}
+
+/// Renglones de la COTIZACIÓN.
+/// CHECK: si hay quotePriceId, unitAmountCents DEBE ser NULL — el precio se
+/// resuelve desde QuotePrice. unitAmountCents solo existe para renglones libres
+/// (producción, viáticos, los paquetes en prosa de Padigol).
+model QuoteLine {
+  id                String  @id @default(cuid())
+  quoteId           String
+  quoteTalentId     String?
+  quotePriceId      String?
+  deliverableTypeId String?
+
+  description     String
+  detail          String?     @db.Text
+  quantity        Int         @default(1)
+  unitAmountCents Int?
+  priceStatus     PriceStatus @default(QUOTED)
+
+  lineDiscountType  DiscountType?
+  lineDiscountValue Int?
+  grossCents        Int           @default(0)
+  discountCents     Int           @default(0)
+  totalCents        Int           @default(0)
+  isBillable        Boolean       @default(true)
+  sortOrder         Int           @default(0)
+  notes             String?
+
+  quote           Quote            @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteTalent     QuoteTalent?     @relation(fields: [quoteTalentId], references: [id], onDelete: Cascade)
+  quotePrice      QuotePrice?      @relation(fields: [quotePriceId], references: [id], onDelete: SetNull)
+  deliverableType DeliverableType? @relation(fields: [deliverableTypeId], references: [id])
+
+  @@index([quoteId, sortOrder])
+}
+
+/// Consideraciones y términos se COPIAN desde AppSetting a la cotización al
+/// crearla, para que queden editables por cotización sin tocar la plantilla.
+model QuoteConsideration {
+  id        String @id @default(cuid())
+  quoteId   String
+  text      String @db.Text
+  sortOrder Int    @default(0)
+  quote     Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId, sortOrder])
+}
+
+model QuoteTerm {
+  id        String @id @default(cuid())
+  quoteId   String
+  number    Int
+  /// El fixture NO tiene "lead" en negritas: solo el marcador "N." va bold
+  /// morado y todo el cuerpo es regular #1C1326.
+  body      String @db.Text
+  sortOrder Int    @default(0)
+  quote     Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, number])
+}
+
+/// ⭐ SNAPSHOT INMUTABLE. Un trigger bloquea UPDATE/DELETE.
+/// El renderer lee EXCLUSIVAMENTE de `payload`, nunca de las tablas vivas.
+model QuoteSnapshot {
+  id          String   @id @default(cuid())
+  quoteId     String
+  version     Int
+  folio       String
+  emittedAt   DateTime @default(now())
+  emittedById String
+  payload     Json // SnapshotPayload autosuficiente (incluye logoDataUri)
+  payloadHash String // sha256 del JSON canónico
+
+  engineVersion   String
+  layoutVersion   String
+  templateVersion String
+  chromiumVersion String
+
+  quote     Quote               @relation("SnapshotsDeQuote", fields: [quoteId], references: [id], onDelete: Restrict)
+  currentOf Quote?              @relation("SnapshotActual")
+  emittedBy Usuario             @relation(fields: [emittedById], references: [id])
+  files     QuoteSnapshotFile[]
+
+  @@unique([quoteId, version])
+  @@index([folio])
+}
+
+/// Tabla hija: se generan DOS documentos por snapshot. Escribir los PDFs aquí
+/// evita relajar el trigger de inmutabilidad del snapshot.
+model QuoteSnapshotFile {
+  id         String        @id @default(cuid())
+  snapshotId String
+  kind       DocKind
+  path       String // /var/lib/katana/documentos/{aaaa}/{mm}/{uuid}.pdf
+  sha256     String
+  bytes      Int
+  pageCount  Int
+  renderedAt DateTime      @default(now())
+  snapshot   QuoteSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, kind])
+}
+
+// ─────────────────── FOLIOS · MARCA · AJUSTES · IMPORT ───────────────────
+
+/// scope = "{FOLIO_CODE}-{YYYY}", p.ej. "HON-2026".
+/// INSERT … ON CONFLICT DO UPDATE … RETURNING: atómico, sin lock explícito.
+model FolioCounter {
+  scope         String   @id
+  lastSeq       Int      @default(0)
+  actualizadoEn DateTime @updatedAt
+}
+
+model BrandAsset {
+  id          String   @id @default(cuid())
+  key         String   @unique // "logo_primary"
+  fileName    String
+  mimeType    String
+  width       Int?
+  height      Int?
+  sha256      String
+  storagePath String
+  creadoEn    DateTime @default(now())
+}
+
+model AppSetting {
+  key           String   @id // "iva.bps", "consideraciones.default", "terminos.default"
+  value         Json
+  actualizadoEn DateTime @updatedAt
+}
+
+/// El preview vive minutos: plan y decisiones son JSON, no 4 tablas con ~2000
+/// filas. La evidencia permanente es el .xlsx guardado + TalentRateRevision +
+/// Bitacora.
+model ImportBatch {
+  id               String       @id @default(cuid())
+  kind             ImportKind
+  originalFileName String
+  sha256           String // indexado, NO único: re-importar el mismo archivo es válido
+  sizeBytes        Int
+  storagePath      String
+  status           ImportStatus @default(UPLOADED)
+  uploadedById     String
+  uploadedAt       DateTime     @default(now())
+  committedAt      DateTime?
+  /// sha256(archivo + JSON canónico de decisiones). Un doble clic no duplica.
+  commitKey        String?      @unique
+  /// ImportPlan completo: 1 entrada por TALENTO, no por talento×formato.
+  plan             Json?
+  decisions        Json?
+  stats            Json?
+  errorMessage     String?      @db.Text
+
+  uploadedBy    Usuario              @relation(fields: [uploadedById], references: [id])
+  rateRevisions TalentRateRevision[]
+
+  @@index([sha256])
+  @@index([status, uploadedAt(sort: Desc)])
+}

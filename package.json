@@ -1,0 +1,72 @@
+{
+  "name": "cotizador-katana",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integracion": "vitest run tests/integracion",
+    "test:pdf": "vitest run tests/pdf",
+    "test:e2e": "playwright test",
+    "huella": "python3 tools/huella.py",
+    "calibrar": "python3 tools/calibrar.py"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "2.0.2",
+    "@prisma/client": "6.19.3",
+    "big.js": "6.2.2",
+    "clsx": "2.1.1",
+    "exceljs": "4.4.0",
+    "immer": "10.1.1",
+    "lucide-react": "0.469.0",
+    "next": "15.5.22",
+    "pino": "9.5.0",
+    "playwright": "1.56.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "2.6.0",
+    "zod": "4.1.11",
+    "zustand": "5.0.2"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
+    "@playwright/test": "1.56.0",
+    "@tailwindcss/postcss": "4.1.14",
+    "@types/big.js": "6.2.2",
+    "@types/node": "22.10.5",
+    "@types/react": "19.0.4",
+    "@types/react-dom": "19.0.2",
+    "@vitejs/plugin-react": "4.3.4",
+    "eslint": "9.39.5",
+    "eslint-config-next": "15.5.22",
+    "fast-check": "3.23.2",
+    "prisma": "6.19.3",
+    "tailwindcss": "4.1.14",
+    "tsx": "4.23.7",
+    "typescript": "5.7.3",
+    "vitest": "4.1.10"
+  },
+  "overrides": {
+    "postcss": "8.5.25",
+    "sharp": "0.35.3",
+    "uuid": "11.1.1",
+    "@eslint/plugin-kit": "0.7.2"
+  }
+}

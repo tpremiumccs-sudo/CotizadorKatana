@@ -1,0 +1,26 @@
+# Solo para DESARROLLO. Compose NO lo carga automáticamente — hay que pedirlo:
+#   docker compose -f docker-compose.dev.yml up -d
+# Levanta únicamente Postgres, publicado en 127.0.0.1:5433 para que `npm run dev`
+# lo alcance desde el host sin chocar con un Postgres local en el 5432.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: katana-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-katana}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-katana_dev_local}
+      POSTGRES_DB: ${POSTGRES_DB:-katana}
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - katana_db_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-katana} -d ${POSTGRES_DB:-katana}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  katana_db_dev:

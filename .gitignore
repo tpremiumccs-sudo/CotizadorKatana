@@ -1,0 +1,36 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Entorno y secretos — NUNCA versionar
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Compose local: no se versiona para que un `git pull` no re-exponga puertos
+docker-compose.override.yml
+
+# Artefactos de pruebas
+/test-results/
+/playwright-report/
+/blob-report/
+/.auth/
+coverage/
+tests/**/__salida__/
+
+# Respaldos
+/respaldos/
+
+# Sistema
+.DS_Store
+*.log
+npm-debug.log*
+.idea/
+.vscode/
+next-env.d.ts
+tsconfig.tsbuildinfo
+__pycache__/
+.venv/
