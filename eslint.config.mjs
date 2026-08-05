@@ -43,16 +43,18 @@ const config = [
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
-          allowTypeImports: true,
           paths: [
             {
               name: '@/lib/db',
+              allowTypeImports: true,
               message:
                 'Prisma solo se usa desde src/server/data/**, que es donde se filtra por rol.',
             },
             {
               name: '@prisma/client',
               importNames: ['PrismaClient'],
+              // `import type` se borra al compilar: no instancia nada.
+              allowTypeImports: true,
               message:
                 'No instancies PrismaClient: usa el singleton de src/lib/db.ts desde la capa de datos.',
             },
