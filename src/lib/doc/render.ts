@@ -1,4 +1,9 @@
-import type { Documento, DocumentoTabulador, CeldaPrecio, ModoRender } from './tipos'
+import type {
+  Documento, DocumentoTabulador, DocumentoCotizacion, CeldaPrecio, ModoRender,
+} from './tipos'
+import {
+  medirBloques, altoTotales, renderBloqueTalento, renderTotales, COT,
+} from './render-cotizacion'
 import {
   PAGINA, COLOR, LAYOUT,
   anchoTexto, cssTop, centrar, alinearDerecha, partirEnLineas,
@@ -101,6 +106,9 @@ function marco(
   ].join('')
 }
 
+/** Pintores primitivos, compartidos con el renderizador de la cotización. */
+const pintor = { texto, rect, lineaH, alinearDerecha }
+
 // ─────────────────────────── contenido del documento ───────────────────────────
 
 /** Qué se imprime en una celda de precio. */
@@ -166,6 +174,9 @@ const ANCHO_LISTA = DERECHA - LAYOUT.sangriaLista
  */
 const SEPARACION_MARCADOR = 2
 
+/** Alto del bloque de confidencialidad más la firma. */
+const ALTO_CIERRE = 23.937 + 39.2 + 11.573 + 8
+
 export interface PaginaTabulador {
   /** Índice de los puntos de Términos que van en esta página. */
   terminos: Array<{ punto: PuntoLista; top: number }>
@@ -175,29 +186,32 @@ export interface PaginaTabulador {
   esUltima: boolean
 }
 
+/** Alto que ocupan Consideraciones + título de Términos desde `desde`. */
+function bloqueConsideraciones(doc: Documento, desde: number): {
+  tituloConsid: number
+  primeraVineta: number
+  tituloTerminos: number
+  primerTermino: number
+} {
+  const tituloConsid = desde + LAYOUT.tablaATitulo
+  const primeraVineta = tituloConsid + LAYOUT.tituloAPrimeraLinea
+  const ultimaVineta = primeraVineta + (doc.consideraciones.length - 1) * LAYOUT.pasoLista
+  const tituloTerminos = ultimaVineta + LAYOUT.seccionASeccion
+  return {
+    tituloConsid,
+    primeraVineta,
+    tituloTerminos,
+    primerTermino: tituloTerminos + LAYOUT.tituloAPrimeraLinea,
+  }
+}
+
 export function paginar(doc: DocumentoTabulador): PaginaTabulador[] {
-  const puntos: PuntoLista[] = doc.terminos.map((t, i) => {
-    const marcador = `${i + 1}.`
-    const inicioTexto =
-      LAYOUT.sangriaLista +
-      anchoTexto(marcador, LAYOUT.listaTam, 'Bold') +
-      anchoTexto(' '.repeat(SEPARACION_MARCADOR), LAYOUT.listaTam, 'Regular')
-    return {
-      marcador,
-      lineas: partirEnLineas(
-        t, ANCHO_LISTA, LAYOUT.listaTam, 'Regular', DERECHA - inicioTexto,
-      ),
-    }
-  })
+  const puntos = puntosDeTerminos(doc)
 
   // ── Página 1: dónde termina lo que va antes de los Términos ────────────
   const tablaFin =
     LAYOUT.tablaTop + LAYOUT.encabezadoAlto + doc.filas.length * LAYOUT.filaAlto
-  const considTitulo = tablaFin + LAYOUT.tablaATitulo
-  const primeraVineta = considTitulo + LAYOUT.tituloAPrimeraLinea
-  const ultimaVineta = primeraVineta + (doc.consideraciones.length - 1) * LAYOUT.pasoLista
-  const terminosTitulo = ultimaVineta + LAYOUT.seccionASeccion
-  let cursor = terminosTitulo + LAYOUT.tituloAPrimeraLinea
+  let cursor = bloqueConsideraciones(doc, tablaFin).primerTermino
 
   const paginas: PaginaTabulador[] = []
   let actual: PaginaTabulador = { terminos: [], esPrimera: true, esUltima: false }
@@ -222,7 +236,6 @@ export function paginar(doc: DocumentoTabulador): PaginaTabulador[] {
   const finTerminos = ultimo
     ? ultimo.top + (ultimo.punto.lineas.length - 1) * LAYOUT.pasoContinuacion
     : LAYOUT.contenidoTop
-  const ALTO_CIERRE = 23.937 + 39.2 + 11.573 + 8 // caja + firma
   if (finTerminos + ALTO_CIERRE > LIMITE_CONTENIDO) {
     paginas.push({ terminos: [], esPrimera: false, esUltima: true })
   } else {
@@ -234,7 +247,7 @@ export function paginar(doc: DocumentoTabulador): PaginaTabulador[] {
 
 // ─────────────────────────── render de cada bloque ───────────────────────────
 
-function encabezadoPrimera(doc: DocumentoTabulador): string {
+function encabezadoPrimera(doc: Documento): string {
   const p: string[] = []
 
   p.push(rect(0, 0, PAGINA.ancho, LAYOUT.barraSuperiorAlto, COLOR.marca))
@@ -260,10 +273,24 @@ function encabezadoPrimera(doc: DocumentoTabulador): string {
       estilo: 'Bold', color: COLOR.oscuro, ancla: 'titulo',
     }),
   )
+
+  // El folio se imprime alineado a la derecha, a la altura del título: es el
+  // dato que la marca cita al responder.
+  const folio = doc.tipo === 'COTIZACION' ? doc.folio : undefined
+  if (folio) {
+    p.push(
+      texto(folio, {
+        left: alinearDerecha(577.984, folio, LAYOUT.metaValorTam, 'Bold'),
+        topPdf: LAYOUT.tituloTop + 6,
+        tam: LAYOUT.metaValorTam, estilo: 'Bold', color: COLOR.marca,
+        ancla: 'folio',
+      }),
+    )
+  }
   return p.join('')
 }
 
-function cajaMetadatos(doc: DocumentoTabulador): string {
+function cajaMetadatos(doc: Documento): string {
   const p: string[] = []
   const top = LAYOUT.metaTop
   const bottom = top + LAYOUT.metaAlto
@@ -379,11 +406,9 @@ function tabla(doc: DocumentoTabulador): string {
   return p.join('')
 }
 
-function consideraciones(doc: DocumentoTabulador): string {
+function consideracionesDesde(doc: Documento, desde: number): string {
   const p: string[] = []
-  const tablaFin =
-    LAYOUT.tablaTop + LAYOUT.encabezadoAlto + doc.filas.length * LAYOUT.filaAlto
-  const tituloTop = tablaFin + LAYOUT.tablaATitulo
+  const tituloTop = desde + LAYOUT.tablaATitulo
 
   p.push(
     texto(doc.tituloConsideraciones, {
@@ -413,16 +438,28 @@ function consideraciones(doc: DocumentoTabulador): string {
   return p.join('')
 }
 
-function tituloTerminos(doc: DocumentoTabulador): string {
-  const tablaFin =
-    LAYOUT.tablaTop + LAYOUT.encabezadoAlto + doc.filas.length * LAYOUT.filaAlto
-  const considTitulo = tablaFin + LAYOUT.tablaATitulo
-  const primeraVineta = considTitulo + LAYOUT.tituloAPrimeraLinea
-  const ultimaVineta = primeraVineta + (doc.consideraciones.length - 1) * LAYOUT.pasoLista
+function tituloTerminosDesde(doc: Documento, desde: number): string {
   return texto(doc.tituloTerminos, {
     left: LAYOUT.margenIzq,
-    topPdf: ultimaVineta + LAYOUT.seccionASeccion,
+    topPdf: bloqueConsideraciones(doc, desde).tituloTerminos,
     tam: LAYOUT.seccionTituloTam, estilo: 'Bold', color: COLOR.oscuro,
+  })
+}
+
+/** Puntos de Términos ya partidos en líneas. Común a los dos documentos. */
+function puntosDeTerminos(doc: Documento): PuntoLista[] {
+  return doc.terminos.map((t, i) => {
+    const marcador = `${i + 1}.`
+    const inicioTexto =
+      LAYOUT.sangriaLista +
+      anchoTexto(marcador, LAYOUT.listaTam, 'Bold') +
+      anchoTexto(' '.repeat(SEPARACION_MARCADOR), LAYOUT.listaTam, 'Regular')
+    return {
+      marcador,
+      lineas: partirEnLineas(
+        t, ANCHO_LISTA, LAYOUT.listaTam, 'Regular', DERECHA - inicioTexto,
+      ),
+    }
   })
 }
 
@@ -452,7 +489,7 @@ function terminosDePagina(pagina: PaginaTabulador): string {
   return p.join('')
 }
 
-function cierre(doc: DocumentoTabulador, pagina: PaginaTabulador): string {
+function cierre(doc: Documento, pagina: PaginaTabulador): string {
   const p: string[] = []
   const ultimo = pagina.terminos[pagina.terminos.length - 1]
   const finTerminos = ultimo
@@ -520,7 +557,7 @@ function cierre(doc: DocumentoTabulador, pagina: PaginaTabulador): string {
   return p.join('')
 }
 
-function cabeceraContinuacion(doc: DocumentoTabulador): string {
+function cabeceraContinuacion(doc: Documento): string {
   const p: string[] = []
   p.push(
     `<img class="logo" src="${doc.logoDataUri}" alt="" style="left:${LAYOUT.logo2Izq}pt;` +
@@ -539,7 +576,7 @@ function cabeceraContinuacion(doc: DocumentoTabulador): string {
   return p.join('')
 }
 
-function pie(doc: DocumentoTabulador, numero: number, total: number): string {
+function pie(doc: Documento, numero: number, total: number): string {
   const p: string[] = []
   p.push(lineaH(LAYOUT.margenPie, 577.984, LAYOUT.pieLineaTop, LAYOUT.pieLineaGrosor, COLOR.borde))
   p.push(
@@ -592,11 +629,155 @@ body{
 `.trim()
 }
 
+// ─────────────────────────── cotización ───────────────────────────
+
+/**
+ * Páginas de una cotización.
+ *
+ * Los bloques de talento fluyen: uno no se parte entre páginas salvo que no
+ * quepa ni en una hoja vacía, y el bloque de totales nunca se separa de la
+ * última línea que resume — si no cabe, baja entero con ella.
+ */
+interface PaginaCotizacion {
+  esPrimera: boolean
+  bloques: Array<{ indice: number; top: number }>
+  totalesTop: number | null
+  /** Consideraciones y términos van tras los totales. */
+  consideracionesTop: number | null
+  terminos: Array<{ punto: PuntoLista; top: number }>
+  esUltima: boolean
+}
+
+function paginarCotizacion(doc: DocumentoCotizacion): PaginaCotizacion[] {
+  const medidos = medirBloques(doc)
+  const paginas: PaginaCotizacion[] = []
+  let actual: PaginaCotizacion = {
+    esPrimera: true, bloques: [], totalesTop: null,
+    consideracionesTop: null, terminos: [], esUltima: false,
+  }
+  let cursor: number = COT.primerBloqueTop
+
+  for (const m of medidos) {
+    if (cursor + m.alto > LIMITE_CONTENIDO && actual.bloques.length > 0) {
+      paginas.push(actual)
+      actual = {
+        esPrimera: false, bloques: [], totalesTop: null,
+        consideracionesTop: null, terminos: [], esUltima: false,
+      }
+      cursor = LAYOUT.contenidoTop
+    }
+    actual.bloques.push({ indice: m.indice, top: cursor })
+    cursor += m.alto + COT.entreBloques
+  }
+
+  // Los totales no se separan del último bloque.
+  const alto = altoTotales(doc)
+  if (cursor + alto > LIMITE_CONTENIDO) {
+    paginas.push(actual)
+    actual = {
+      esPrimera: false, bloques: [], totalesTop: null,
+      consideracionesTop: null, terminos: [], esUltima: false,
+    }
+    cursor = LAYOUT.contenidoTop
+  }
+  actual.totalesTop = cursor
+  cursor += alto
+
+  // Consideraciones y términos, con el mismo ritmo que en el tabulador.
+  const marcas = bloqueConsideraciones(doc, cursor)
+  if (marcas.primerTermino > LIMITE_CONTENIDO) {
+    paginas.push(actual)
+    actual = {
+      esPrimera: false, bloques: [], totalesTop: null,
+      consideracionesTop: null, terminos: [], esUltima: false,
+    }
+    cursor = LAYOUT.contenidoTop - LAYOUT.tablaATitulo
+  }
+  actual.consideracionesTop = cursor
+  const m2 = bloqueConsideraciones(doc, cursor)
+  let y = m2.primerTermino
+
+  for (const punto of puntosDeTerminos(doc)) {
+    const altoPunto = (punto.lineas.length - 1) * LAYOUT.pasoContinuacion
+    if (y + altoPunto > LIMITE_CONTENIDO) {
+      paginas.push(actual)
+      actual = {
+        esPrimera: false, bloques: [], totalesTop: null,
+        consideracionesTop: null, terminos: [], esUltima: false,
+      }
+      y = LAYOUT.contenidoTop
+    }
+    actual.terminos.push({ punto, top: y })
+    y += altoPunto + LAYOUT.pasoLista
+  }
+
+  paginas.push(actual)
+  const ultimo = actual.terminos[actual.terminos.length - 1]
+  const finTerminos = ultimo
+    ? ultimo.top + (ultimo.punto.lineas.length - 1) * LAYOUT.pasoContinuacion
+    : LAYOUT.contenidoTop
+  if (finTerminos + ALTO_CIERRE > LIMITE_CONTENIDO) {
+    paginas.push({
+      esPrimera: false, bloques: [], totalesTop: null,
+      consideracionesTop: null, terminos: [], esUltima: true,
+    })
+  } else {
+    paginas[paginas.length - 1]!.esUltima = true
+  }
+  return paginas
+}
+
+function renderCotizacion(doc: DocumentoCotizacion, fuentes: Fuentes): string {
+  const paginas = paginarCotizacion(doc)
+  const medidos = medirBloques(doc)
+  const total = paginas.length
+
+  const cuerpo = paginas
+    .map((pagina, i) => {
+      const piezas: string[] = []
+      if (pagina.esPrimera) {
+        piezas.push(encabezadoPrimera(doc))
+        piezas.push(cajaMetadatos(doc))
+      } else {
+        piezas.push(cabeceraContinuacion(doc))
+      }
+      for (const b of pagina.bloques) {
+        piezas.push(renderBloqueTalento(doc, b.indice, medidos[b.indice]!, b.top, pintor))
+      }
+      if (pagina.totalesTop !== null) {
+        piezas.push(renderTotales(doc, pagina.totalesTop, pintor))
+      }
+      if (pagina.consideracionesTop !== null) {
+        piezas.push(consideracionesDesde(doc, pagina.consideracionesTop))
+        piezas.push(tituloTerminosDesde(doc, pagina.consideracionesTop))
+      }
+      piezas.push(terminosDePagina(pagina))
+      if (pagina.esUltima) {
+        piezas.push(cierre(doc, { terminos: pagina.terminos, esPrimera: false, esUltima: true }))
+      }
+      piezas.push(pie(doc, i + 1, total))
+      return `<div class="pagina" data-pagina="${i + 1}">${piezas.join('')}</div>`
+    })
+    .join('')
+
+  return envolver(doc, fuentes, cuerpo)
+}
+
+function envolver(doc: Documento, fuentes: Fuentes, cuerpo: string): string {
+  return (
+    '<!doctype html><html lang="es-MX"><head><meta charset="utf-8">' +
+    `<title>${esc(doc.titulo)} · ${esc(doc.cliente)}</title>` +
+    `<style>${cssDocumento(fuentes)}</style></head><body>${cuerpo}</body></html>`
+  )
+}
+
 export function renderDocumentHtml(
   doc: Documento,
   fuentes: Fuentes,
   _modo: ModoRender = 'print',
 ): string {
+  if (doc.tipo === 'COTIZACION') return renderCotizacion(doc, fuentes)
+
   const paginas = paginar(doc)
   const total = paginas.length
 
@@ -607,8 +788,10 @@ export function renderDocumentHtml(
         piezas.push(encabezadoPrimera(doc))
         piezas.push(cajaMetadatos(doc))
         piezas.push(tabla(doc))
-        piezas.push(consideraciones(doc))
-        piezas.push(tituloTerminos(doc))
+        const finTabla =
+          LAYOUT.tablaTop + LAYOUT.encabezadoAlto + doc.filas.length * LAYOUT.filaAlto
+        piezas.push(consideracionesDesde(doc, finTabla))
+        piezas.push(tituloTerminosDesde(doc, finTabla))
       } else {
         piezas.push(cabeceraContinuacion(doc))
       }
@@ -619,9 +802,5 @@ export function renderDocumentHtml(
     })
     .join('')
 
-  return (
-    '<!doctype html><html lang="es-MX"><head><meta charset="utf-8">' +
-    `<title>${esc(doc.titulo)} · ${esc(doc.cliente)}</title>` +
-    `<style>${cssDocumento(fuentes)}</style></head><body>${cuerpo}</body></html>`
-  )
+  return envolver(doc, fuentes, cuerpo)
 }

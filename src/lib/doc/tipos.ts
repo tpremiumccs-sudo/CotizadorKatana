@@ -82,6 +82,75 @@ export interface DocumentoTabulador {
   preciosEnMorado: boolean
 }
 
-export type Documento = DocumentoTabulador
+// ─────────────────────────── Cotización ───────────────────────────
+
+export interface RenglonCotizacion {
+  /** "Reel colaborativo (IG)" */
+  concepto: string
+  /** Detalle opcional bajo el concepto. */
+  detalle?: string
+  cantidad: number
+  unitAmountCents: number | null
+  status: EstadoPrecioDoc
+  /** Importe de la línea ya con su descuento. */
+  totalCents: number
+  /** No suma: se imprime como referencia. */
+  informativa: boolean
+}
+
+export interface BloqueTalentoCotizacion {
+  nombre: string
+  renglones: RenglonCotizacion[]
+  /** Neto del talento, tras descuentos de renglón y su parte del de paquete. */
+  netCents: number
+}
+
+export interface TotalesCotizacion {
+  subtotalCents: number
+  descuentoCents: number
+  baseGravableCents: number
+  ivaCents: number
+  ivaEtiqueta: string
+  totalCents: number
+  /** "TRESCIENTOS NOVENTA Y CUATRO MIL… PESOS 00/100 M.N." */
+  totalEnLetra: string
+}
+
+/**
+ * Cotización con entregables y totales.
+ *
+ * Comparte el cromo del tabulador —encabezado, caja de metadatos,
+ * consideraciones, términos, confidencialidad y pie— y cambia la matriz por
+ * bloques de talento con sus renglones y un bloque de totales.
+ */
+export interface DocumentoCotizacion {
+  tipo: 'COTIZACION'
+  eyebrow: string
+  titulo: string
+  cliente: string
+  /** El folio se imprime junto al título. */
+  folio?: string
+  meta: MetaDoc[]
+  /** Alcance en una frase, sobre los bloques de talento. */
+  alcance?: string
+  bloques: BloqueTalentoCotizacion[]
+  totales: TotalesCotizacion
+  tituloConsideraciones: string
+  consideraciones: string[]
+  tituloTerminos: string
+  terminos: string[]
+  confidencialidadTitulo: string
+  confidencialidadTexto: string
+  firma: string
+  piePagina: string
+  logoDataUri: string
+  textoPendiente: string
+  textoCasoPorCaso: string
+  textoNoAplica: string
+  textoVacio: string
+  preciosEnMorado: boolean
+}
+
+export type Documento = DocumentoTabulador | DocumentoCotizacion
 
 export type ModoRender = 'preview' | 'print'

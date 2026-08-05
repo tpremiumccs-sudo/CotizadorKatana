@@ -55,11 +55,14 @@ SALIDA_ANCHOS = os.path.join(RAIZ, 'src/lib/doc/anchos.json')
 SALIDA_METRICAS = os.path.join(RAIZ, 'src/lib/doc/metricas.json')
 
 # Combinaciones (estilo, tamaño) que usa el Tabulador de HONOR, medidas del PDF.
+# Combinaciones del tabulador de HONOR más las que añade la COTIZACIÓN
+# (Bold 11 para la franja del TOTAL, Regular 9.7 y 7.2 para sus renglones).
 SONDAS = [
-    ('Bold', 19.0), ('Bold', 13.5), ('Bold', 10.0), ('Bold', 9.7),
-    ('Bold', 9.6), ('Bold', 9.0), ('Bold', 8.3), ('Bold', 8.2),
-    ('Bold', 7.2),
-    ('Regular', 9.0), ('Regular', 8.2), ('Regular', 7.6), ('Regular', 7.0),
+    ('Bold', 19.0), ('Bold', 13.5), ('Bold', 11.0), ('Bold', 10.0),
+    ('Bold', 9.7), ('Bold', 9.6), ('Bold', 9.0), ('Bold', 8.3),
+    ('Bold', 8.2), ('Bold', 7.2),
+    ('Regular', 11.0), ('Regular', 9.7), ('Regular', 9.0), ('Regular', 8.2),
+    ('Regular', 7.6), ('Regular', 7.2), ('Regular', 7.0),
 ]
 
 # Cadenas reales del documento: si Chromium las mide como la tabla, cualquier
