@@ -60,6 +60,10 @@ ENV NODE_ENV=production \
 # Sin estas fuentes el PDF NO sale idéntico al original.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       openssl ca-certificates tini \
+      `# pg_dump y pg_restore: la app se respalda a sí misma antes de aplicar` \
+      `# una importación, que es lo que hace las veces de "deshacer". Sin` \
+      `# ellos ese respaldo falla y la importación se bloquea.` \
+      postgresql-client \
       fonts-urw-base35 fonts-liberation fonts-dejavu-core \
       libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
       libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \

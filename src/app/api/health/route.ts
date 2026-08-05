@@ -116,6 +116,20 @@ export async function GET() {
     detalle.almacenamientoError = e instanceof Error ? e.message : String(e)
   }
 
+  // ── Herramientas de respaldo ───────────────────────────────────────────
+  // La app se respalda a sí misma antes de aplicar una importación. Si falta
+  // pg_dump, esa importación se bloquea — mejor saberlo aquí.
+  try {
+    const { execFile } = await import('node:child_process')
+    const { promisify } = await import('node:util')
+    await promisify(execFile)('pg_dump', ['--version'], { timeout: 10_000 })
+    detalle.pgDump = true
+  } catch {
+    // No tumba la salud general: la app funciona, sólo que no se podrá
+    // importar hasta que esté. Se reporta para que se vea.
+    detalle.pgDump = false
+  }
+
   return NextResponse.json(
     { ok, ...detalle, ts: new Date().toISOString() },
     {

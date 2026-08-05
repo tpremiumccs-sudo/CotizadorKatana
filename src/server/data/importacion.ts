@@ -10,6 +10,7 @@ import {
 import { buildImportPlan } from '@/server/import/plan'
 import { commitImport, type DecisionesImport } from '@/server/import/commit'
 import { FORMATO_POR_CODE } from '@/server/import/catalogo'
+import { respaldarAntesDe, RespaldoFallidoError } from '@/server/data/respaldo'
 import type { PlanImportacion } from '@/server/import/types'
 
 /**
@@ -33,7 +34,7 @@ const DIR_SUBIDAS =
   process.env.UPLOADS_DIR ??
   join(process.env.STORAGE_DIR ?? join(process.cwd(), 'var'), 'importaciones')
 
-export { MAX_BYTES, ArchivoInvalidoError }
+export { MAX_BYTES, ArchivoInvalidoError, RespaldoFallidoError }
 
 export interface ResultadoSubida {
   importBatchId: string
@@ -227,6 +228,18 @@ export async function aplicarImportacion(
   if (!lote.plan) throw new Error('Esa importación no tiene un plan calculado.')
 
   const plan = lote.plan as unknown as PlanImportacion
+
+  // Respaldo ANTES de tocar nada. Aplicar reescribe el tarifario completo y no
+  // hay "deshacer": revertirlo bien exigiría guardar el estado anterior de ~400
+  // tarifas y sus relaciones, que es justo lo que hace un volcado. Si el
+  // respaldo falla, no se aplica — un respaldo que se salta en silencio no
+  // protege de nada.
+  //
+  // Se omite si ya se aplicó: la segunda llamada es idempotente y no cambia
+  // nada de lo que haya que proteger.
+  const yaEstaba = lote.status === 'COMMITTED'
+  const respaldo = yaEstaba ? null : await respaldarAntesDe(lote.originalFileName)
+
   const resultado = await commitImport(prisma, plan, decisiones, actor)
 
   await prisma.importBatch.update({
@@ -252,8 +265,14 @@ export async function aplicarImportacion(
           `${actor.nombre} aplicó "${lote.originalFileName}": ` +
           `${resultado.talentosCreados} talento(s) nuevo(s), ` +
           `${resultado.talentosActualizados} actualizado(s), ` +
-          `${resultado.tarifasEscritas} tarifa(s) escrita(s).`,
-        metadatos: resultado as unknown as Record<string, unknown>,
+          `${resultado.tarifasEscritas} tarifa(s) escrita(s).` +
+          (respaldo
+            ? ` Se respaldó la base antes de aplicar (${(respaldo.bytes / 1024).toFixed(0)} KB).`
+            : ''),
+        metadatos: {
+          ...(resultado as unknown as Record<string, unknown>),
+          respaldoPrevio: respaldo?.ruta ?? null,
+        },
       })
     })
   }
