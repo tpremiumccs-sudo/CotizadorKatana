@@ -110,6 +110,32 @@ async function asegurarClienteSinDefinir() {
   })
 }
 
+/**
+ * El precio que de verdad rige: el ajuste si existe, si no el del tarifario.
+ *
+ * Es la misma regla que aplica el tabulador. Se repite aquí en vez de importar
+ * `precioEfectivo` porque aquélla habla de celdas del editor y ésta de filas de
+ * Prisma; forzar una sola firma acabaría en un tipo que no describe ninguna de
+ * las dos.
+ */
+function efectivo(p: {
+  baseAmountCents: number | null
+  basePriceStatus: string
+  overrideAmountCents: number | null
+  overridePriceStatus: string | null
+}): { amountCents: number | null; status: EstadoPrecioDoc } {
+  if (p.overridePriceStatus) {
+    return {
+      amountCents: p.overrideAmountCents,
+      status: p.overridePriceStatus as EstadoPrecioDoc,
+    }
+  }
+  return {
+    amountCents: p.baseAmountCents,
+    status: p.basePriceStatus as EstadoPrecioDoc,
+  }
+}
+
 // ─────────────────────────────── Lectura ───────────────────────────────
 
 /**
@@ -155,9 +181,7 @@ export async function leerHoja(quoteId: string): Promise<EstadoHoja | null> {
       lines: {
         orderBy: { sortOrder: 'asc' },
         include: {
-          quotePrice: {
-            select: { baseAmountCents: true, basePriceStatus: true },
-          },
+          quotePrice: true,
           deliverableType: { select: { allowsQuantity: true } },
         },
       },
@@ -169,20 +193,23 @@ export async function leerHoja(quoteId: string): Promise<EstadoHoja | null> {
 
   const renglonesPorTalento = new Map<string, RenglonHoja[]>()
   for (const l of q.lines) {
-    if (!l.quoteTalentId) continue
+    // Sin talento o sin precio enlazado no es un renglón de esta hoja.
+    if (!l.quoteTalentId || !l.quotePrice) continue
+    const e = efectivo(l.quotePrice)
     const lista = renglonesPorTalento.get(l.quoteTalentId) ?? []
     lista.push({
       id: l.id,
       quoteTalentId: l.quoteTalentId,
+      quotePriceId: l.quotePrice.id,
       deliverableTypeId: l.deliverableTypeId,
       concepto: l.description,
       detalle: l.detail,
       cantidad: l.quantity,
-      unitAmountCents: l.unitAmountCents,
-      priceStatus: l.priceStatus as EstadoPrecioDoc,
+      unitAmountCents: e.amountCents,
+      priceStatus: e.status,
       permiteCantidad: l.deliverableType?.allowsQuantity ?? true,
-      baseAmountCents: l.quotePrice?.baseAmountCents ?? null,
-      basePriceStatus: (l.quotePrice?.basePriceStatus as EstadoPrecioDoc | null) ?? null,
+      baseAmountCents: l.quotePrice.baseAmountCents,
+      basePriceStatus: l.quotePrice.basePriceStatus as EstadoPrecioDoc,
       orden: l.sortOrder,
     })
     renglonesPorTalento.set(l.quoteTalentId, lista)
@@ -325,6 +352,7 @@ async function recalcularTotales(
         select: {
           id: true, quoteTalentId: true, quantity: true,
           unitAmountCents: true, priceStatus: true, isBillable: true,
+          quotePrice: true,
         },
       },
     },
@@ -333,14 +361,21 @@ async function recalcularTotales(
 
   const calculo = computeQuote({
     talents: q.talents.map((t) => ({ id: t.id, displayName: '' })),
-    lines: q.lines.map((l) => ({
-      id: l.id,
-      quoteTalentId: l.quoteTalentId,
-      quantity: l.quantity,
-      unitAmountCents: l.unitAmountCents,
-      priceStatus: l.priceStatus as EstadoPrecioDoc,
-      isBillable: l.isBillable,
-    })),
+    lines: q.lines.map((l) => {
+      // El precio manda desde el `QuotePrice` cuando la línea lo enlaza; sólo
+      // los renglones libres llevan el suyo propio.
+      const p = l.quotePrice
+        ? efectivo(l.quotePrice)
+        : { amountCents: l.unitAmountCents, status: l.priceStatus as EstadoPrecioDoc }
+      return {
+        id: l.id,
+        quoteTalentId: l.quoteTalentId,
+        quantity: l.quantity,
+        unitAmountCents: p.amountCents,
+        priceStatus: p.status,
+        isBillable: l.isBillable,
+      }
+    }),
     taxMode: 'ADDED',
     taxRateBps: q.taxRateBps,
   })
@@ -549,7 +584,6 @@ export async function agregarRenglon(
         basePriceStatus: tarifa?.priceStatus ?? 'PENDING',
         showInTabulador: false,
       },
-      select: { id: true, baseAmountCents: true, basePriceStatus: true },
     })
 
     const ultimo = await tx.quoteLine.aggregate({
@@ -565,12 +599,14 @@ export async function agregarRenglon(
         deliverableTypeId: e.deliverableTypeId,
         description: formato.name,
         quantity: 1,
-        // El renglón nace con la tarifa del tarifario, tal cual, sin ajuste.
-        unitAmountCents: precio.baseAmountCents,
-        priceStatus: precio.basePriceStatus,
+        // El importe se queda NULL a propósito: lo manda el `QuotePrice`. La
+        // restricción `ql_price_source` lo exige, y con razón — un renglón con
+        // precio propio y precio enlazado son dos verdades para la misma cifra.
+        unitAmountCents: null,
         sortOrder: (ultimo._max.sortOrder ?? -1) + 1,
       },
     })
+    const vigente = efectivo(precio)
 
     await append(tx, {
       actor,
@@ -585,12 +621,13 @@ export async function agregarRenglon(
     return {
       id: linea.id,
       quoteTalentId: e.quoteTalentId,
+      quotePriceId: precio.id,
       deliverableTypeId: e.deliverableTypeId,
       concepto: linea.description,
       detalle: linea.detail,
       cantidad: linea.quantity,
-      unitAmountCents: linea.unitAmountCents,
-      priceStatus: linea.priceStatus as EstadoPrecioDoc,
+      unitAmountCents: vigente.amountCents,
+      priceStatus: vigente.status,
       permiteCantidad: formato.allowsQuantity,
       baseAmountCents: precio.baseAmountCents,
       basePriceStatus: precio.basePriceStatus as EstadoPrecioDoc,
@@ -612,6 +649,10 @@ export interface CambioRenglon {
 /**
  * Cambia cantidad, precio o estado de un renglón.
  *
+ * La cantidad es de la línea; el precio es del `QuotePrice`. Cada cosa se
+ * escribe donde vive, y el ajuste se guarda SIN pisar la base copiada del
+ * tarifario — así se puede enseñar de dónde salió la cifra y revertirla.
+ *
  * No escribe en `TalentRate`: bajarle el precio a un talento para este cliente
  * no se lo baja para todos.
  */
@@ -621,10 +662,8 @@ export async function actualizarRenglon(
   const { revision, resultado } = await conBloqueo(c.quoteId, c.revision, async (tx, actor) => {
     const antes = await tx.quoteLine.findUnique({
       where: { id: c.lineaId },
-      select: {
-        quoteId: true, description: true, quantity: true,
-        unitAmountCents: true, priceStatus: true,
-        quotePrice: { select: { baseAmountCents: true, basePriceStatus: true } },
+      include: {
+        quotePrice: true,
         deliverableType: { select: { allowsQuantity: true } },
         quoteTalent: {
           select: {
@@ -637,25 +676,58 @@ export async function actualizarRenglon(
     if (!antes || antes.quoteId !== c.quoteId) {
       throw new Error('Ese renglón no pertenece a esta cotización.')
     }
+    if (!antes.quotePrice) {
+      throw new Error('Ese renglón no tiene un precio enlazado.')
+    }
 
     if (c.cantidad !== undefined && (!Number.isInteger(c.cantidad) || c.cantidad < 1)) {
       throw new Error('La cantidad tiene que ser un entero mayor que cero.')
     }
 
-    const estado = c.priceStatus ?? antes.priceStatus
-    const datos: Prisma.QuoteLineUpdateInput = {}
-    if (c.cantidad !== undefined) datos.quantity = c.cantidad
-    if (c.priceStatus !== undefined) datos.priceStatus = c.priceStatus
-    if (c.unitAmountCents !== undefined) {
-      // Un renglón sin importe no es un renglón de cero: vaciar el campo lo
-      // deja "por validar", que es lo que significa.
-      datos.unitAmountCents = estado === 'QUOTED' ? c.unitAmountCents : null
-    } else if (c.priceStatus !== undefined && c.priceStatus !== 'QUOTED') {
-      datos.unitAmountCents = null
+    const previo = efectivo(antes.quotePrice)
+
+    // ── La cantidad, en la línea ───────────────────────────────────────
+    const despues =
+      c.cantidad !== undefined
+        ? await tx.quoteLine.update({
+            where: { id: c.lineaId },
+            data: { quantity: c.cantidad },
+          })
+        : antes
+
+    // ── El precio, en el QuotePrice, como ajuste ───────────────────────
+    let precio = antes.quotePrice
+    if (c.priceStatus !== undefined || c.unitAmountCents !== undefined) {
+      const estado = c.priceStatus ?? previo.status
+      const importe =
+        c.unitAmountCents !== undefined ? c.unitAmountCents : previo.amountCents
+
+      // Volver a coincidir con el tarifario no es un ajuste: es no tener uno.
+      const igualALaBase =
+        estado === antes.quotePrice.basePriceStatus &&
+        importe === antes.quotePrice.baseAmountCents
+
+      precio = await tx.quotePrice.update({
+        where: { id: antes.quotePrice.id },
+        data: igualALaBase
+          ? {
+              overrideAmountCents: null,
+              overridePriceStatus: null,
+              overriddenById: null,
+              overriddenAt: null,
+            }
+          : {
+              // Un renglón sin importe no es un renglón de cero: vaciarlo lo
+              // deja "por validar", que es lo que significa.
+              overrideAmountCents: estado === 'QUOTED' ? importe : null,
+              overridePriceStatus: estado,
+              overriddenById: actor.id,
+              overriddenAt: new Date(),
+            },
+      })
     }
 
-    const despues = await tx.quoteLine.update({ where: { id: c.lineaId }, data: datos })
-
+    const vigente = efectivo(precio)
     const talento =
       antes.quoteTalent?.displayNameOverride ??
       antes.quoteTalent?.talent.displayName ??
@@ -670,8 +742,8 @@ export async function actualizarRenglon(
       entidadEtiqueta: `${talento} · ${antes.description}`,
       resumen:
         `${actor.nombre} ajustó ${antes.description} de ${talento}: ` +
-        `${describir(antes.quantity, antes.priceStatus, antes.unitAmountCents)} → ` +
-        `${describir(despues.quantity, despues.priceStatus, despues.unitAmountCents)}`,
+        `${describir(antes.quantity, previo.status, previo.amountCents)} → ` +
+        `${describir(despues.quantity, vigente.status, vigente.amountCents)}`,
       // Mientras alguien teclea un precio, cada pulsación produciría un apunte.
       coalescerPor: `renglon|${c.lineaId}`,
     })
@@ -679,16 +751,16 @@ export async function actualizarRenglon(
     return {
       id: despues.id,
       quoteTalentId: despues.quoteTalentId!,
+      quotePriceId: precio.id,
       deliverableTypeId: despues.deliverableTypeId,
       concepto: despues.description,
       detalle: despues.detail,
       cantidad: despues.quantity,
-      unitAmountCents: despues.unitAmountCents,
-      priceStatus: despues.priceStatus as EstadoPrecioDoc,
+      unitAmountCents: vigente.amountCents,
+      priceStatus: vigente.status,
       permiteCantidad: antes.deliverableType?.allowsQuantity ?? true,
-      baseAmountCents: antes.quotePrice?.baseAmountCents ?? null,
-      basePriceStatus:
-        (antes.quotePrice?.basePriceStatus as EstadoPrecioDoc | null) ?? null,
+      baseAmountCents: precio.baseAmountCents,
+      basePriceStatus: precio.basePriceStatus as EstadoPrecioDoc,
       orden: despues.sortOrder,
     } satisfies RenglonHoja
   })

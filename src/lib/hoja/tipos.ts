@@ -44,15 +44,30 @@ export interface AccionTalento {
   priceStatus: EstadoPrecioHoja
 }
 
+/**
+ * Un renglón de la hoja.
+ *
+ * El precio NO vive aquí: vive en el `QuotePrice` al que apunta la línea, con
+ * su base copiada del tarifario y su ajuste aparte. La base de datos lo exige
+ * —`ql_price_source`— y la razón es buena: si la línea guardara su propio
+ * importe, el tabulador y la cotización del MISMO documento podrían enseñar
+ * cifras distintas para el mismo talento y formato.
+ *
+ * `unitAmountCents` y `priceStatus` de abajo son el precio EFECTIVO ya
+ * resuelto (ajuste si lo hay, si no la base). La línea sólo posee la cantidad.
+ */
 export interface RenglonHoja {
   /** QuoteLine.id */
   id: string
   quoteTalentId: string
+  /** Dónde vive de verdad el precio. */
+  quotePriceId: string
   /** `null` en condiciones libres que no salen del catálogo. */
   deliverableTypeId: string | null
   concepto: string
   detalle: string | null
   cantidad: number
+  /** Precio efectivo ya resuelto: el ajuste si existe, si no el del tarifario. */
   unitAmountCents: number | null
   priceStatus: EstadoPrecioHoja
   permiteCantidad: boolean
