@@ -196,7 +196,8 @@ export async function listarCotizaciones(limite = 50) {
       projectName: true, actualizadoEn: true, totalCents: true,
       client: { select: { displayName: true } },
       createdBy: { select: { nombre: true } },
-      _count: { select: { talents: true, columns: true } },
+      includeCotizacion: true,
+      _count: { select: { talents: true, columns: true, lines: true } },
     },
   })
 }

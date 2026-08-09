@@ -89,7 +89,11 @@ export default async function PaginaCotizaciones() {
                   )}
                 </span>
                 <span className="text-xs text-etiqueta">
-                  {q._count.talents} talento(s) × {q._count.columns} formato(s)
+                  {/* La hoja cuenta renglones; el tabulador, columnas. Decir
+                      "0 formato(s)" en una hoja es contar lo que no tiene. */}
+                  {q.includeCotizacion
+                    ? `${q._count.talents} talento(s) · ${q._count.lines} renglón(es)`
+                    : `${q._count.talents} talento(s) × ${q._count.columns} formato(s)`}
                 </span>
                 <span className="text-xs text-tinta-suave">
                   {ETIQUETA_ESTADO[q.status] ?? q.status}
