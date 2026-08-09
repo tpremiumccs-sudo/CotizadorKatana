@@ -38,7 +38,10 @@ export default async function PaginaCotizaciones() {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/cotizaciones/nueva"
-              className="text-sm text-katana-600 underline underline-offset-2 hover:text-katana-800"
+              data-touch-target
+              className="inline-flex min-h-[44px] items-center rounded-katana px-2
+                         text-sm text-katana-600 underline underline-offset-2
+                         hover:bg-katana-100 hover:text-katana-800"
             >
               Tabulador comparativo
             </Link>

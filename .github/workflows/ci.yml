@@ -200,7 +200,17 @@ jobs:
           # El seed no se puede ejecutar aquí (no hay base), pero sí comprobar
           # que Node lo carga: eso descarta que le falte una dependencia en el
           # node_modules mínimo del standalone, que es como fallaría de verdad.
-          probar "cd /app && node --input-type=module -e \"import('./prisma/seed.mjs').catch(e => { if (String(e).includes('ERR_MODULE_NOT_FOUND')) { console.error(e); process.exit(1) } })\"" "el seed resuelve sus imports"
+          #
+          # No sirve envolver el import en un .catch(): `seed.mjs` termina en
+          # `main().catch(() => process.exit(1))`, así que al no haber base se
+          # mata a sí mismo y el proceso muere con código 1 antes de que ese
+          # catch signifique nada. La comprobación fallaba SIEMPRE, y por un
+          # motivo que no tiene que ver con lo que quiere comprobar.
+          #
+          # Se mira la salida en vez del código: sólo un ERR_MODULE_NOT_FOUND
+          # es un fallo de verdad; que Prisma no encuentre la base es lo
+          # esperado aquí.
+          probar "cd /app && s=\$(node --input-type=module -e 'import(\"./prisma/seed.mjs\")' 2>&1); if echo \"\$s\" | grep -q ERR_MODULE_NOT_FOUND; then echo \"\$s\"; exit 1; fi" "el seed resuelve sus imports"
 
           if [ "$fallos" -gt 0 ]; then
             echo ""
