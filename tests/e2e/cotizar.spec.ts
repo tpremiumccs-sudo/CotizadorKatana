@@ -73,7 +73,7 @@ test('de cero a PDF', async ({ page }) => {
   })
   // Sin tarifa base no hay porcentaje que calcular: no se inventa uno.
   await expect(celdaMariel.locator('p').first()).toHaveText(
-    /Sin tarifa base \(Pendiente\)/,
+    /Sin tarifa base \(Por validar\)/,
   )
 
   // ── Persiste ─────────────────────────────────────────────────────────────

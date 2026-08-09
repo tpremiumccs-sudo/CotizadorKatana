@@ -19,9 +19,16 @@ import {
  * los precios del tabulador de HONOR son exactamente eso—.
  */
 
+/**
+ * Cómo se nombra cada estado de tarifa frente al usuario.
+ *
+ * "Por validar" y no "Pendiente": lo que le falta a esa tarifa es que alguien
+ * la confirme. Es la misma palabra que usa la hoja de cotización, para que el
+ * tarifario y el documento no llamen distinto a lo mismo.
+ */
 export const ETIQUETA_ESTADO: Record<EstadoPrecioEditor, string> = {
   QUOTED: 'Con precio',
-  PENDING: 'Pendiente',
+  PENDING: 'Por validar',
   CASE_BY_CASE: 'Caso por caso',
   NOT_APPLICABLE: 'No aplica',
 }

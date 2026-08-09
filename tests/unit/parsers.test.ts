@@ -7,6 +7,7 @@ import {
   type TalentoConocido,
 } from '@/server/import/identity'
 import { normalizeHeader, esFilaCentinela } from '@/server/import/header'
+import { rosterDesdeTipo } from '@/server/import/plan'
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('parsePrice', () => {
@@ -295,5 +296,37 @@ describe('normalizeHeader y filas centinela', () => {
     expect(esFilaCentinela(['EJEMPLO', '— borrar esta fila —', '— borrar —'])).toBe(true)
     expect(esFilaCentinela(['KT-001', 'Divino Espinoza', 'Divino Espinoza'])).toBe(false)
     expect(esFilaCentinela(['[Qué hace, por qué importa]'])).toBe(true)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('rosterDesdeTipo', () => {
+  it('clasifica como KATANA las seis variantes que trae la hoja TALENTOS', () => {
+    for (const v of [
+      'KATANA — Casa',
+      'KATANA — Aliado (definir)',
+      'KATANA — Acceso exclusivo',
+      'KATANA — Operable',
+      'KATANA — Ecosistema Tejón',
+      'KATANA — Chuy',
+    ]) {
+      expect(rosterDesdeTipo(v), v).toBe('KATANA')
+    }
+  })
+
+  it('saca del cotizador a quien la hoja marca como red comercial', () => {
+    // Es exactamente la celda que hay que cambiarle a Gambetiti para excluirlo
+    // desde la fuente, en vez de esconderlo en el frontend.
+    expect(rosterDesdeTipo('KIF (red comercial)')).toBe('KIF')
+    expect(rosterDesdeTipo('kif')).toBe('KIF')
+    expect(rosterDesdeTipo('FIERA — Roster')).toBe('FIERA')
+  })
+
+  it('no reclasifica cuando la celda está vacía o no nombra una red', () => {
+    // Devolver KATANA por omisión devolvería al cotizador a un aliado que la
+    // hoja de KIF ya había marcado.
+    expect(rosterDesdeTipo('')).toBeNull()
+    expect(rosterDesdeTipo('   ')).toBeNull()
+    expect(rosterDesdeTipo('Por definir')).toBeNull()
   })
 })

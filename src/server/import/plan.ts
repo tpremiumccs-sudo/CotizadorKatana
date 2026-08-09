@@ -480,6 +480,17 @@ export function buildImportPlan(
               texto(fila[cVert]).split(/[,;]/).map((s) => s.trim()).filter(Boolean),
             )
           }
+
+          // La misma columna que da `relationshipType` es la que clasifica el
+          // roster: "KATANA — Casa", "KIF (red comercial)", "FIERA — …". Sin
+          // leerla, sacar a alguien del cotizador obligaba a esconderlo en el
+          // frontend; con ella se corrige donde vive el dato.
+          const cTipo = idx.get('Tipo (casa / aliado)')
+          if (cTipo != null) {
+            const r = rosterDesdeTipo(texto(fila[cTipo]))
+            if (r) asignar(e, 'roster', r)
+          }
+
           agregarMetricas(e, fila, idx, PLATAFORMAS_TALENTOS, hTal.nombre, i, nombre)
         }
       }
@@ -595,6 +606,28 @@ export function buildImportPlan(
 }
 
 // ─────────────────────────── auxiliares ───────────────────────────
+
+/**
+ * Clasifica el roster a partir de la columna "Tipo (casa / aliado)".
+ *
+ * Los valores reales del CRM son frases, no códigos: "KATANA — Casa",
+ * "KATANA — Aliado (definir)", "KATANA — Ecosistema Tejón", "KIF (red
+ * comercial)". Se reconoce la red por la palabra, no por la frase completa,
+ * porque las variantes se escriben a mano y cambian.
+ *
+ * Devuelve `null` cuando la celda está vacía o no nombra ninguna red conocida:
+ * en ese caso NO se toca el roster que ya tenga el talento. Reclasificar por
+ * omisión sería peor que no reclasificar — devolvería a KATANA a alguien que
+ * la hoja de KIF ya había marcado como aliado.
+ */
+export function rosterDesdeTipo(crudo: string): 'KATANA' | 'KIF' | 'FIERA' | null {
+  const t = crudo.toUpperCase()
+  if (!t.trim()) return null
+  if (t.includes('KIF')) return 'KIF'
+  if (t.includes('FIERA')) return 'FIERA'
+  if (t.includes('KATANA')) return 'KATANA'
+  return null
+}
 
 function hojaFaltante(nombre: string, severidad: Severidad = 'AVISO'): Incidencia {
   return {

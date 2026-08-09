@@ -31,7 +31,7 @@ export default async function PaginaTarifario() {
         {(
           [
             ['Con precio', tarifario.conteos.QUOTED, 'text-exito'],
-            ['Pendientes', tarifario.conteos.PENDING, 'text-alerta'],
+            ['Por validar', tarifario.conteos.PENDING, 'text-alerta'],
             ['Caso por caso', tarifario.conteos.CASE_BY_CASE, 'text-tinta-suave'],
             ['No aplica', tarifario.conteos.NOT_APPLICABLE, 'text-etiqueta'],
           ] as const

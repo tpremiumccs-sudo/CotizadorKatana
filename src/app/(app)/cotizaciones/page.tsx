@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { listarCotizaciones } from '@/server/data/cotizacion'
 import { requireActor } from '@/server/data/actor'
 import { can } from '@/lib/authz/policy'
+import { abrirHojaNueva } from './nueva/acciones'
 import { formatMXN } from '@/lib/money'
 
 export const metadata: Metadata = { title: 'Cotizaciones' }
@@ -34,14 +35,24 @@ export default async function PaginaCotizaciones() {
           Cotizaciones
         </h1>
         {puedeCrear && (
-          <Link
-            href="/cotizaciones/nueva"
-            data-touch-target
-            className="inline-flex min-h-[44px] items-center rounded-katana bg-katana-500
-                       px-4 text-sm font-semibold text-white hover:bg-katana-600"
-          >
-            Nueva cotización
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/cotizaciones/nueva"
+              className="text-sm text-katana-600 underline underline-offset-2 hover:text-katana-800"
+            >
+              Tabulador comparativo
+            </Link>
+            <form action={abrirHojaNueva}>
+              <button
+                type="submit"
+                data-touch-target
+                className="inline-flex min-h-[44px] items-center rounded-katana bg-katana-500
+                           px-4 text-sm font-semibold text-white hover:bg-katana-600"
+              >
+                Nueva cotización
+              </button>
+            </form>
+          </div>
         )}
       </div>
 
@@ -50,7 +61,7 @@ export default async function PaginaCotizaciones() {
                       text-sm text-tinta-suave">
           Todavía no hay ninguna.{' '}
           {puedeCrear
-            ? 'Crea la primera: elige el cliente, los talentos y los formatos, y el tabulador queda armado con los precios del tarifario.'
+            ? 'Crea la primera: agrega un talento y toca lo que le vas a vender.'
             : 'Cuando alguien cree una, aparecerá aquí.'}
         </p>
       ) : (

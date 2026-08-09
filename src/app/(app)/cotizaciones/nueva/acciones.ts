@@ -3,7 +3,26 @@
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { crearCotizacion } from '@/server/data/cotizacion'
+import { crearBorradorVacio } from '@/server/data/hoja'
 import { ForbiddenError } from '@/lib/authz/policy'
+
+/**
+ * Abre una cotización nueva y entra directo a ella.
+ *
+ * Sin formulario previo: no se pregunta cliente, ni talentos, ni formatos. El
+ * borrador nace vacío y se llena en la hoja, que es donde el usuario ya está
+ * mirando. Esto es lo que convierte cinco interacciones en una.
+ */
+export async function abrirHojaNueva(): Promise<void> {
+  let id: string
+  try {
+    id = await crearBorradorVacio()
+  } catch (e) {
+    if (e instanceof ForbiddenError) redirect('/cotizaciones')
+    throw e
+  }
+  redirect(`/cotizaciones/${id}`)
+}
 
 const esquema = z.object({
   clienteNombre: z.string().trim().min(1, 'Escribe el nombre del cliente.'),

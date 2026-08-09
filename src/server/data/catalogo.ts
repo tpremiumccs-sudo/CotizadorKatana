@@ -11,7 +11,11 @@ export async function opcionesParaNueva() {
 
   const [talentos, formatos] = await Promise.all([
     prisma.talent.findMany({
-      where: { isActive: true },
+      // Sólo el roster de casa. Sin este filtro entran los aliados de KIF —30
+      // nombres que la agencia no cotiza desde aquí— porque el importador los
+      // da de alta correctamente marcados y la consulta no miraba el campo.
+      // El índice [roster, isActive] existe justo para esto.
+      where: { isActive: true, roster: 'KATANA' },
       orderBy: { displayName: 'asc' },
       select: {
         id: true, displayName: true, category: true,
@@ -41,4 +45,41 @@ export async function opcionesParaNueva() {
       sublabel: f.pdfSublabel,
     })),
   }
+}
+
+export interface CardRoster {
+  id: string
+  nombre: string
+  categoria: string | null
+  fotoUrl: string | null
+  /** Formatos con precio de verdad: distingue a quien está listo para cotizar. */
+  conTarifa: number
+}
+
+/**
+ * El roster que se enseña como cards en la hoja de cotización.
+ *
+ * Deliberadamente escueto —foto, nombre y categoría—: elegir a quién cotizar no
+ * requiere la biografía ni las métricas, y cargarlas aquí volvería lento el
+ * gesto más frecuente de la aplicación. Eso vive en la ficha del talento.
+ */
+export async function rosterParaHoja(): Promise<CardRoster[]> {
+  await autorizar('cotizacion.crear')
+
+  const talentos = await prisma.talent.findMany({
+    where: { isActive: true, roster: 'KATANA' },
+    orderBy: { displayName: 'asc' },
+    select: {
+      id: true, displayName: true, category: true, photoUrl: true,
+      _count: { select: { rates: { where: { priceStatus: 'QUOTED' } } } },
+    },
+  })
+
+  return talentos.map((t) => ({
+    id: t.id,
+    nombre: t.displayName,
+    categoria: t.category,
+    fotoUrl: t.photoUrl,
+    conTarifa: t._count.rates,
+  }))
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireActor } from '@/server/data/actor'
 import { can } from '@/lib/authz/policy'
+import { abrirHojaNueva } from './cotizaciones/nueva/acciones'
 
 export default async function Inicio() {
   // El layout ya exigió sesión; aquí se vuelve a pedir el actor porque hace
@@ -19,26 +20,29 @@ export default async function Inicio() {
           idéntica al PDF que se envía.
         </p>
 
-        <div className="mt-8 flex flex-wrap gap-3">
+        {/* La acción principal es evidente: cotizar. Lo demás es secundario. */}
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          {can(actor, 'cotizacion.crear').permitido && (
+            <form action={abrirHojaNueva}>
+              <button
+                type="submit"
+                data-touch-target
+                className="inline-flex min-h-[44px] items-center rounded-katana bg-katana-500
+                           px-5 text-sm font-semibold text-white hover:bg-katana-600"
+              >
+                Nueva cotización
+              </button>
+            </form>
+          )}
           <Link
             href="/cotizaciones"
             data-touch-target
-            className="inline-flex min-h-[44px] items-center rounded-katana bg-katana-500
-                       px-5 text-sm font-semibold text-white hover:bg-katana-600"
+            className="inline-flex min-h-[44px] items-center rounded-katana border
+                       border-katana-300 px-5 text-sm font-semibold text-katana-600
+                       hover:bg-katana-100"
           >
-            Ver cotizaciones
+            Cotizaciones anteriores
           </Link>
-          {can(actor, 'cotizacion.crear').permitido && (
-            <Link
-              href="/cotizaciones/nueva"
-              data-touch-target
-              className="inline-flex min-h-[44px] items-center rounded-katana border
-                         border-katana-300 px-5 text-sm font-semibold text-katana-600
-                         hover:bg-katana-100"
-            >
-              Nueva cotización
-            </Link>
-          )}
         </div>
 
         <div className="mt-10 rounded-katana border border-katana-200 bg-katana-100 p-5">
