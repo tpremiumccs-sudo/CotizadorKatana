@@ -219,7 +219,11 @@ export async function commitImport(
  * campo al plan, tiene que entrar también aquí Y al modelo.
  */
 export const CAMPOS_TALENTO = new Set([
-  'canonicalName', 'category', 'relationshipType', 'country', 'city',
+  // `displayName` está aquí porque la hoja TALENTOS es la autoridad sobre el
+  // nombre que se imprime. Sin él, el nombre se congelaba en la grafía de la
+  // primera hoja que creó el registro y no había forma de corregirlo
+  // reimportando.
+  'canonicalName', 'displayName', 'category', 'relationshipType', 'country', 'city',
   'primaryPlatformNote', 'rateNotes', 'rateSourceLabel', 'bio',
   'driveFolderId', 'verticals', 'roster',
   'commercialNotes', 'username', 'linkInstagram', 'linkTiktok', 'linkYoutube',

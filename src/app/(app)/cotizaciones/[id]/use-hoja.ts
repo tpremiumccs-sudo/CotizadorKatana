@@ -163,11 +163,20 @@ export function useHoja(inicial: EstadoHoja, soloLectura: boolean) {
         deliverableTypeId,
       })
       if (!r) return
+      // El servidor sube la cantidad si el formato ya estaba: hay que
+      // reemplazar ese renglón, no añadir uno repetido.
       setDoc((d) => ({
         ...d,
-        talentos: d.talentos.map((t) =>
-          t.id === quoteTalentId ? { ...t, renglones: [...t.renglones, r.renglon] } : t,
-        ),
+        talentos: d.talentos.map((t) => {
+          if (t.id !== quoteTalentId) return t
+          const existe = t.renglones.some((x) => x.id === r.renglon.id)
+          return {
+            ...t,
+            renglones: existe
+              ? t.renglones.map((x) => (x.id === r.renglon.id ? r.renglon : x))
+              : [...t.renglones, r.renglon],
+          }
+        }),
       }))
     },
     [escribir, ruta],

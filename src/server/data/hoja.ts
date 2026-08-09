@@ -586,6 +586,52 @@ export async function agregarRenglon(
       },
     })
 
+    // Tocar "Reel" tres veces son 3 Reels, no tres renglones de uno.
+    //
+    // Es como se dicta una cotización en voz alta —"tres TikToks"— y evita la
+    // lista repetida que obligaría a sumar de cabeza. Para cotizar dos veces
+    // el mismo formato a precios distintos está el ajuste por renglón, que es
+    // otra conversación.
+    const yaEsta = await tx.quoteLine.findFirst({
+      where: {
+        quoteId: e.quoteId,
+        quoteTalentId: e.quoteTalentId,
+        deliverableTypeId: e.deliverableTypeId,
+      },
+    })
+    if (yaEsta) {
+      const sube = await tx.quoteLine.update({
+        where: { id: yaEsta.id },
+        data: { quantity: { increment: 1 } },
+      })
+      const v = efectivo(precio)
+      await append(tx, {
+        actor,
+        categoria: 'COTIZACION',
+        accion: 'cotizacion.renglon_ajustado',
+        entidadTipo: 'QuoteLine',
+        entidadId: sube.id,
+        entidadEtiqueta: `${qt.talent.displayName} · ${formato.name}`,
+        resumen: `${actor.nombre} subió ${formato.name} de ${qt.talent.displayName} a ${sube.quantity}.`,
+        coalescerPor: `renglon|${sube.id}`,
+      })
+      return {
+        id: sube.id,
+        quoteTalentId: e.quoteTalentId,
+        quotePriceId: precio.id,
+        deliverableTypeId: e.deliverableTypeId,
+        concepto: sube.description,
+        detalle: sube.detail,
+        cantidad: sube.quantity,
+        unitAmountCents: v.amountCents,
+        priceStatus: v.status,
+        permiteCantidad: formato.allowsQuantity,
+        baseAmountCents: precio.baseAmountCents,
+        basePriceStatus: precio.basePriceStatus as EstadoPrecioDoc,
+        orden: sube.sortOrder,
+      } satisfies RenglonHoja
+    }
+
     const ultimo = await tx.quoteLine.aggregate({
       where: { quoteId: e.quoteId },
       _max: { sortOrder: true },

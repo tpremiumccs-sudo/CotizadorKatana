@@ -217,6 +217,29 @@ describe('renglones', () => {
     expect(tieneAjusteRenglon(renglon)).toBe(false)
   })
 
+  it('tocar el mismo formato tres veces son 3 piezas, no 3 renglones', async () => {
+    entrarComo(admin)
+    const id = await crearBorradorVacio()
+    const h0 = (await leerHoja(id))!
+    const a = await agregarTalento(id, nene, h0.revision)
+
+    let rev = a.revision
+    let ultimo
+    for (let i = 0; i < 3; i++) {
+      ultimo = await agregarRenglon({
+        quoteId: id, quoteTalentId: a.talento.id,
+        deliverableTypeId: dtReelId, revision: rev,
+      })
+      rev = ultimo.revision
+    }
+
+    expect(ultimo!.renglon.cantidad).toBe(3)
+    const h = (await leerHoja(id))!
+    expect(h.talentos[0]!.renglones).toHaveLength(1)
+    // 3 × 70,000
+    expect(totalesDeHoja(h).subtotalCents).toBe(21_000_000)
+  })
+
   it('la cantidad multiplica y el total se guarda de verdad', async () => {
     entrarComo(admin)
     const id = await crearBorradorVacio()

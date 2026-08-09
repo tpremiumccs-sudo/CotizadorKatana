@@ -464,6 +464,22 @@ export function buildImportPlan(
           if (!nombre || esFilaCentinela(fila)) continue
 
           const e = entrada(nombre)
+
+          // TALENTOS manda sobre el nombre que se imprime.
+          //
+          // Es la hoja de talentos vigentes de la agencia: si ahí dice
+          // "Divino Espinoza", eso es lo que va en el documento. Sin esto gana
+          // la primera hoja que creó el registro, y como el roster suele
+          // importarse antes, quedaban las grafías crudas de captura —
+          // "Padigol)", "Ronny (Ronaldo López)", "Tony Gastelum"— en la cara
+          // del cliente.
+          //
+          // El nombre preferido del alias sembrado sigue ganando: es el que
+          // cabe en la columna del tabulador ("Kike Padilla", no "Kike
+          // Padilla / Rookie Leagues").
+          const preferido = e.codigo ? DISPLAY_PREFERIDO.get(e.codigo) : undefined
+          asignar(e, 'displayName', preferido ?? nombre)
+
           for (const [header, campo] of [
             ['Categoría', 'category'],
             ['Tipo (casa / aliado)', 'relationshipType'],

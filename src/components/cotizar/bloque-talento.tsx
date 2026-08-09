@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { formatMXN } from '@/lib/money'
 import { RenglonLinea } from '@/components/cotizar/renglon-linea'
-import { totalRenglon } from '@/lib/hoja/tipos'
+import { totalRenglon, ETIQUETA_ESTADO_HOJA } from '@/lib/hoja/tipos'
 import type { TalentoHoja, EstadoPrecioHoja } from '@/lib/hoja/tipos'
 
 /**
@@ -107,23 +107,38 @@ export function BloqueTalento({
         </p>
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
-          {frecuentes.map((a) => (
-            <button
-              key={a.deliverableTypeId}
-              type="button"
-              onClick={() => onAgregarRenglon(a.deliverableTypeId)}
-              disabled={soloLectura}
-              data-touch-target
-              title={
-                a.priceStatus === 'QUOTED' && a.amountCents !== null
-                  ? formatMXN(a.amountCents)
-                  : 'Por validar'
-              }
-              className="min-h-[44px] rounded-katana border border-katana-300 bg-katana-50 px-3 text-sm font-medium text-katana-700 hover:border-katana-500 hover:bg-katana-100 disabled:opacity-50"
-            >
-              {a.nombre}
-            </button>
-          ))}
+          {/* El precio va EN el botón: agregar a ciegas y descubrir la cifra
+              después es justo el paso que sobra. Y donde no hay tarifa se dice
+              "Por validar" o "Caso por caso", nunca un número inventado. */}
+          {frecuentes.map((a) => {
+            const conPrecio = a.priceStatus === 'QUOTED' && a.amountCents !== null
+            return (
+              <button
+                key={a.deliverableTypeId}
+                type="button"
+                onClick={() => onAgregarRenglon(a.deliverableTypeId)}
+                disabled={soloLectura}
+                data-touch-target
+                aria-label={`Agregar ${a.nombre} a ${t.nombre}`}
+                className="flex min-h-[48px] flex-col justify-center rounded-katana border
+                           border-katana-300 bg-katana-50 px-3 py-1 text-left
+                           hover:border-katana-500 hover:bg-katana-100 disabled:opacity-50"
+              >
+                <span className="text-sm font-medium leading-tight text-katana-700">
+                  {a.nombre}
+                </span>
+                <span
+                  className={`text-[11px] leading-tight tabular ${
+                    conPrecio ? 'text-precio' : 'text-alerta'
+                  }`}
+                >
+                  {conPrecio
+                    ? formatMXN(a.amountCents!)
+                    : ETIQUETA_ESTADO_HOJA[a.priceStatus]}
+                </span>
+              </button>
+            )
+          })}
 
           {resto.length > 0 && (
             <button
